@@ -1,13 +1,22 @@
 # agent-discovery-crawler
 
-Measurement crawler for the agent-discovery layer (paper §4: *Nobody's Home at
-`/.well-known`*), v0.4.0 (adds the WebMCP headless module, the 5K WebMCP
+
+Measurement crawler for the agent-discovery layer (paper §4: *Supply Without Demand: Measuring
+Agent-Discovery Artifacts on the Web*), v0.4.0 (adds the WebMCP headless module, the 5K WebMCP
 subsample builder and band sharding; see "Changes in 0.4.0" at the end).
 For each host it fetches the
 fourteen canonical discovery paths in random order plus two random nonexistent
 paths (SimHash soft-404 baseline), validates each artifact,
 fingerprints the hosting platform from the homepage, and runs endpoint/OAuth
 hygiene checks on any valid MCP/A2A card or protected-resource document.
+
+## Data
+
+Crawl results (Tranco list 647LX top 100K, WebMCP subsample) are published as gzipped JSONL, with a datasheet and SHA-256 manifest, in this Google Drive folder:
+
+https://drive.google.com/drive/folders/1jLDzuVje_Y-iQqP0YApaoULo0-PfpmhL
+
+Per-host security findings (`hygiene`) are withheld until coordinated disclosure completes; see `release/DATASHEET.md`. A Zenodo DOI will replace the Drive link at publication.
 
 Node.js >= 20, TypeScript. Dependencies: `undici` (HTTP + proxy agent), `ajv`
 (JSON structural checks), `yaml` (OpenAPI YAML), `p-limit` (host concurrency),

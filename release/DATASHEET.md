@@ -2,7 +2,7 @@
 
 Measurements of the files websites publish for AI agents: `llms.txt`, MCP server cards, OAuth protected-resource and authorization-server metadata, A2A agent cards, `ai-catalog.json`, OpenAPI documents, `security.txt`, `ai.txt`, and in-page WebMCP tool registrations.
 
-Data licence: CC BY 4.0. Code licence: MIT (see `LICENSE` at the repository root).
+Code: https://github.com/itmilos/agent-discovery-crawler (MIT). Data licence: CC BY 4.0. Data folder: https://drive.google.com/drive/folders/1jLDzuVje_Y-iQqP0YApaoULo0-PfpmhL
 
 ## What is in each file
 
