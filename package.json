@@ -1,0 +1,40 @@
+{
+  "name": "agent-discovery-crawler",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "crawl": "UV_THREADPOOL_SIZE=64 tsx src/run.ts",
+    "summarize": "tsx src/summarize.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx src/selftest.ts",
+    "fixtures": "tsx src/fixture-server.ts 8787",
+    "crawl:fixtures": "CRAWLER_FIXTURE_PORT=8787 UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/fixtures.txt --out out/fixtures.jsonl --scheme http --rps-per-host 50 --vantage local",
+    "crawl:local": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/smoke.txt --out out/smoke-local.jsonl --vantage local --concurrency 10 --rps-per-host 1",
+    "crawl:tranco1k": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/tranco-latest-1-1k.txt --out out/tranco-1-1k-local.jsonl --vantage local --concurrency 20 --rps-per-host 1 --progress",
+    "corpus:tranco": "tsx src/corpus/tranco.ts",
+    "rank:backfill": "tsx src/rank-backfill.ts",
+    "crawl:tranco10k": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/tranco-latest-1k-10k.txt --out out/tranco-1k-10k-local.jsonl --vantage local --concurrency 20 --rps-per-host 1 --progress",
+    "crawl:tranco100k": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/tranco-latest-10k-100k.txt --out out/tranco-10k-100k-local.jsonl --vantage local --concurrency 40 --rps-per-host 1 --progress",
+    "webmcp": "tsx src/webmcp-run.ts",
+    "webmcp:fixtures": "CRAWLER_FIXTURE_PORT=8787 tsx src/webmcp-run.ts --hosts hosts/webmcp-fixtures.txt --out out/webmcp-fixtures.jsonl --scheme http --concurrency 2 --pages 4",
+    "corpus:webmcp-sample": "tsx src/corpus/subsample.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "p-limit": "^6.1.0",
+    "playwright-core": "^1.57.0",
+    "tldts": "^6.1.60",
+    "undici": "^6.21.0",
+    "yaml": "^2.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

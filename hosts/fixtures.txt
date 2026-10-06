@@ -1,0 +1,7 @@
+good.fixture
+spa.fixture
+broken.fixture
+blocked.fixture
+empty.fixture
+redirect.fixture
+apex.fixture

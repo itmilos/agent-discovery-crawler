@@ -1,0 +1,9 @@
+node_modules/
+dist/
+out/
+!out/fixtures.jsonl
+hosts/tranco-*
+hosts/webmcp-sample*
+release/data/
+*.bak
+.DS_Store
