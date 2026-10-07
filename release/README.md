@@ -5,3 +5,4 @@
 Releases so far:
 
 - `v0.4.0-data-2026-10-05`: Tranco 1-10K complete, 10K-100K partial (first 50,515 hosts), WebMCP sample complete.
+- `release-2026-10-07 (v0.6.0)`: Tranco 1-100K complete, WebMCP sample, commerce, fintech and MCP-registry corpora; Drive subfolder of the same name.

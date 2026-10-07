@@ -23,6 +23,7 @@ import { buildFindings, csvEscape, hygieneFindings, isShopifyHost, isShopifyIssu
 import { originTrialKind } from './webmcp-run.js';
 import { parseBand, parseBands, parseTrancoCsv, buildBands, readZip, csvFromZip, renderBandFile, writeCorpus } from './corpus/tranco.js';
 import { endpointHost, extractOfficial, officialNextCursor, pageOfficial, extractGlama, glamaNext, extractSmitheryDetail, dedupeHosts, writeRegistryCorpus, loadTrancoRanks, trancoRankFor } from './corpus/registry.js';
+import { drawSample, extractEvidence, renderBlindCsv, parseCsv, score as fpScore, shuffle } from './fingerprint-sample.js';
 import { parseIntelItem, parseIntelBody, classify, makePacer, readLabels, labelHosts, writeRadarCorpus, LABEL_SOURCE, type RadarLabel } from './corpus/radar.js';
 import { mkdtempSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -659,6 +660,65 @@ await t('radar/intel: labelHosts against a loopback stand-in: skips cached hosts
   assert.ok(readFileSync(join(dir, 'fintech-latest.txt'), 'utf8').includes('\n1,done.example\n'));
   assert.ok(existsSync(join(dir, 'radar-2026-10-06.meta.json')));
   assert.deepEqual(meta.categories_top[0], { name: 'Banking', hosts: 1 });
+});
+
+// ---- 0.6.0: fingerprint precision sample (offline) ----
+await t('fp-sample: stratified seeded draw is deterministic, caps per label, skips small labels and unreachable', () => {
+  const pool: Array<{ host: string; rank: number | null; primary: string; source: string }> = [];
+  const mk = (label: string, n: number) => { for (let i = 0; i < n; i++) pool.push({ host: `${label}${i}.example`, rank: i + 1, primary: label, source: 'f' }); };
+  mk('wordpress', 50); mk('shopify', 25); mk('nextjs', 20); mk('ghost', 5); mk('unknown', 300); mk('unreachable', 30);
+  const a = drawSample(pool, { perLabel: 20, unknownN: 40, seed: 7 });
+  const b = drawSample(pool, { perLabel: 20, unknownN: 40, seed: 7 });
+  assert.deepEqual(a.sample.map((s) => s.host), b.sample.map((s) => s.host));
+  assert.deepEqual(a.strata.wordpress, { pool: 50, drawn: 20 });
+  assert.deepEqual(a.strata.nextjs, { pool: 20, drawn: 20 });
+  assert.deepEqual(a.strata.ghost, { pool: 5, drawn: 0 });
+  assert.deepEqual(a.strata.unknown, { pool: 300, drawn: 40 });
+  assert.deepEqual(a.strata.unreachable, { pool: 30, drawn: 0 });
+  assert.equal(a.sample.length, 100);
+  assert.equal(new Set(a.sample.map((s) => s.host)).size, 100, 'without replacement');
+  assert.notDeepEqual(drawSample(pool, { perLabel: 20, unknownN: 40, seed: 8 }).sample.map((s) => s.host), a.sample.map((s) => s.host));
+  // blind order carries no label information: first 20 are not all one stratum
+  assert.ok(new Set(a.sample.slice(0, 20).map((s) => s.stratum)).size > 1);
+  assert.deepEqual(shuffle([1, 2, 3], mulberry32(1)).sort(), [1, 2, 3]);
+});
+await t('fp-sample: evidence extraction uses generator, foreign asset domains, title and headers; self-domain assets excluded', () => {
+  const html = `<html><head><title> My   Shop </title><meta name="generator" content="WordPress 6.6"><link rel="stylesheet" href="https://cdn.shopify.com/s/files/x.css"><script src="//cdn.shopify.com/s/js/a.js"></script><script src="https://static.myshop.example/app.js"></script><img src="https://www.googletagmanager.com/x.png"><script src="https://cdn.shopify.com/b.js"></script></head><body></body></html>`;
+  const ev = extractEvidence('myshop.example', 42, html, { server: 'nginx', 'x-powered-by': 'PHP/8' }, 200, 'https://www.myshop.example/');
+  assert.equal(ev.title, 'My Shop');
+  assert.equal(ev.generator, 'WordPress 6.6');
+  assert.deepEqual(ev.asset_domains, ['shopify.com', 'googletagmanager.com']);
+  assert.equal(ev.asset_domain_counts['shopify.com'], 3);
+  assert.equal(ev.server, 'nginx'); assert.equal(ev.powered_by, 'PHP/8'); assert.equal(ev.x_generator, null);
+  assert.ok(ev.html_head.length <= 2000 && ev.html_head.includes('generator'));
+});
+await t('fp-sample: blind CSV has no predicted column and round-trips through the parser; score gives precision/recall/kappa', () => {
+  const evs: import('./fingerprint-sample.js').Evidence[] = [
+    { host: 'a.example', rank: 1, fetched_at: '', status: 200, final_url: 'https://a.example/', title: 'A, "quoted"', generator: null, server: 'nginx', powered_by: null, x_generator: null, asset_domains: ['wp.com'], asset_domain_counts: { 'wp.com': 1 }, platform_paths_200: ['/wp-login.php'], html_head: '' },
+    { host: 'b.example', rank: 2, fetched_at: '', status: 200, final_url: null, title: null, generator: 'Hugo', server: null, powered_by: null, x_generator: null, asset_domains: [], asset_domain_counts: {}, platform_paths_200: [], html_head: '' },
+  ];
+  const csv = renderBlindCsv(evs);
+  assert.ok(!/predicted|stratum/.test(csv));
+  const rows = parseCsv(csv);
+  assert.equal(rows.length, 2); assert.equal(rows[0].title, 'A, "quoted"'); assert.equal(rows[0].truth, ''); assert.equal(rows[1].generator, 'Hugo');
+  const sample = [
+    { host: 'a.example', rank: 1, predicted: 'wordpress', stratum: 'wordpress', source: 'f' },
+    { host: 'b.example', rank: 2, predicted: 'hugo', stratum: 'hugo', source: 'f' },
+    { host: 'c.example', rank: 3, predicted: 'wordpress', stratum: 'wordpress', source: 'f' },
+    { host: 'd.example', rank: 4, predicted: 'unknown', stratum: 'unknown', source: 'f' },
+    { host: 'e.example', rank: 5, predicted: 'unknown', stratum: 'unknown', source: 'f' },
+    { host: 'f.example', rank: 6, predicted: 'shopify', stratum: 'shopify', source: 'f' },
+  ];
+  const truth = new Map([['a.example', 'wordpress'], ['b.example', 'hugo'], ['c.example', 'shopify'], ['d.example', 'none'], ['e.example', 'wordpress'], ['f.example', '?']]);
+  const sc = fpScore(sample, truth);
+  assert.equal(sc.rated, 5); assert.equal(sc.undecidable, 1);
+  assert.equal(sc.per_label.wordpress.precision, 0.5); // a right, c wrong
+  assert.equal(sc.per_label.wordpress.recall, 0.5); // a found, e missed (unknown)
+  assert.equal(sc.per_label.hugo.precision, 1);
+  assert.equal(sc.per_label.unknown.precision, 0.5);
+  assert.ok(Math.abs(sc.accuracy - 0.6) < 1e-9);
+  assert.ok(sc.kappa > 0 && sc.kappa < 1, String(sc.kappa));
+  assert.deepEqual(sc.confusions.map((c) => c.host), ['c.example', 'e.example']);
 });
 
 // ---- HTTP layer: content decoding, 303, timeout, shared limiter (loopback server) ----

@@ -10,6 +10,14 @@ paths (SimHash soft-404 baseline), validates each artifact,
 fingerprints the hosting platform from the homepage, and runs endpoint/OAuth
 hygiene checks on any valid MCP/A2A card or protected-resource document.
 
+## Data
+
+Crawl results are published as gzipped JSONL with a datasheet and SHA-256 manifest in this Google Drive folder:
+
+https://drive.google.com/drive/folders/1jLDzuVje_Y-iQqP0YApaoULo0-PfpmhL
+
+Current release: `release-2026-10-07 (v0.6.0)` — Tranco list 647LX top 100K (three bands), the 5,000-host WebMCP subsample, the commerce (7,810 hosts) and fintech (4,050) vertical corpora, and the MCP-registry corpus (17,238 hosts), each crawled from one local vantage between 5 and 7 October 2026. Per-host security findings (`hygiene`) are withheld until coordinated disclosure completes (window closes 4 January 2027); see `release/DATASHEET.md`. A Zenodo DOI will replace the Drive link at publication.
+
 Node.js >= 20, TypeScript. Dependencies: `undici` (HTTP + proxy agent), `ajv`
 (JSON structural checks), `yaml` (OpenAPI YAML), `p-limit` (host concurrency),
 `tldts` (registrable domain), and since 0.4.0 `playwright-core` (headless
@@ -831,6 +839,30 @@ fingerprint precision sample is the place to check them. The self-test runs
 cache-skip, legacy-row, batching, 429 retry, miss caching and token-rejection
 paths, and the selection and writer on recorded answers.
 
+## Fingerprint precision sample (paper §4.5, limitations) — 0.6.0
+
+```
+npm run fp:draw     # seeded stratified draw from the three band files -> out/fingerprint-sample.hosts.jsonl (+ .meta.json)
+npm run fp:fetch    # re-fetch each homepage, collect rater evidence -> out/fingerprint-sample.jsonl, release/fingerprint-sample.blind.csv
+#  ... a rater fills the `truth` column of the blind CSV (platform label as in fingerprint.ts, "none", or "?") ...
+npm run fp:score    # precision / recall per label, accuracy, Cohen's kappa -> out/fingerprint-sample.score.json
+```
+
+Twenty reachable hosts per primary platform label with at least 20 hosts, plus
+40 hosts the fingerprint left `unknown`, drawn without replacement with a fixed
+seed (20261007) and shuffled so the sheet order reveals nothing. The rater
+sees evidence that fingerprint.ts does **not** match on: the `<meta
+name=generator>` tag, the registrable domains of every foreign script / link /
+img / iframe asset on the homepage (most frequent first), which well-known
+platform paths answer 200 (`/wp-login.php`, `/wp-json/`,
+`/_next/static/chunks/`, `/_nuxt/`, `/cdn/shop/`, `/products.json`, ...), the
+page title and the raw `Server` / `X-Powered-By` / `X-Generator` headers. The
+predicted label stays in the hosts file and is joined back only at scoring
+time. Precision per label is what the paper quotes; recall over the `unknown`
+stratum says how much the fingerprint misses. The self-test covers the draw,
+the evidence extractor, the CSV round trip and the scorer; the fetch runs from
+the laptop.
+
 ## TODO
 
 - **WebMCP module follow-ups** (§4.2): a `webmcp:summarize` table; a
@@ -959,7 +991,8 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
 2. Version bump: UA `AgentDiscoveryCrawler/0.6`, `crawler_version` `0.6.0`.
    Nothing in the probe set, classification or output schema changed, so
    0.5.0 and 0.6.0 results files are directly comparable.
-3. Self-test: 97 checks (was 88).
+3. **Fingerprint precision sample** (`src/fingerprint-sample.ts`, `npm run fp:draw|fetch|score`), see its section.
+4. Self-test: 100 checks (was 88).
 
 ## Changes in 0.5.0
 
