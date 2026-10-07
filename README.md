@@ -982,6 +982,24 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
    HTTP crawl output is unchanged apart from the version string; results from
    0.3.2 need no re-crawl.
 
+## Changes in 0.6.1
+
+Fingerprint rules tightened after the precision sample (560 hosts, 20 per
+label, rated from evidence the rules do not use; `release/fingerprint-sample.blind.csv`,
+`out/fingerprint-sample.score.json`): `nextra` (was 0% precision: the
+substring matched font names such as "PantonExtraBold"), `readme.io` (0%:
+matched prose and links) and `squarespace` (35%) now require an asset path,
+a theme file or a bootstrap symbol; a `pages.dev` asset is a hint rather than
+a platform (26%: widgets hosted on Pages). Unchanged labels and their
+measured precision: shopify 100%, ghost 100%, hugo 100%, hubspot 100%,
+webflow 100%, framer 95%, docusaurus 85%, gatsby 85%, wordpress 80%, wix 80%,
+nextjs 70%, nuxt 40%; header-derived hosting labels 89–100% where the
+re-fetch saw the same header (github-pages, vercel, netlify disagree mainly
+because a CDN in front hid the origin header on re-fetch). Results files
+crawled with 0.6.0 and earlier keep the old labels; the paper reports the
+measured precision alongside them. UA `AgentDiscoveryCrawler/0.6`,
+`crawler_version` `0.6.1`; probe set and output schema unchanged.
+
 ## Changes in 0.6.0
 
 1. **MCP-registry corpus loader** (`src/corpus/registry.ts`, `npm run

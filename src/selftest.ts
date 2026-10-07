@@ -292,7 +292,19 @@ await t('fingerprint: server=cloudflare alone is NOT cloudflare-pages', () => {
   assert.equal(fp.primary, 'unknown');
   assert.equal(fp.cdn, 'cloudflare');
   const pages = fingerprintFromResponse(fr(200, '<html><script src="https://my-site.pages.dev/app.js"></script></html>', 'text/html', { server: 'cloudflare' }));
-  assert.ok(pages.platforms.includes('cloudflare-pages'));
+  assert.ok(!pages.platforms.includes('cloudflare-pages'), '0.6.1: a pages.dev asset is a hint, not a platform (26% precision)');
+  assert.ok(pages.hints.includes('cloudflare-pages'));
+});
+await t('fingerprint 0.6.1: nextra / readme.io / squarespace need an asset path or bootstrap symbol, not a substring', () => {
+  const font = fingerprintFromResponse(fr(200, '<html><head><style>font-family: PantonExtraBold;</style></head></html>', 'text/html'));
+  assert.ok(!font.platforms.includes('nextra'), 'nExtraBold must not match nextra');
+  const prose = fingerprintFromResponse(fr(200, '<html><body><p>Our docs moved from readme.io to Squarespace, see https://readme.io/pricing</p></body></html>', 'text/html'));
+  assert.ok(!prose.platforms.includes('readme.io') && !prose.platforms.includes('squarespace'), JSON.stringify(prose.platforms));
+  assert.equal(fingerprintFromResponse(fr(200, '<html><head><script src="/_next/static/chunks/nextra-theme-docs.js"></script></head></html>', 'text/html')).primary, 'nextra');
+  assert.equal(fingerprintFromResponse(fr(200, '<html><head><link href="https://cdn.readme.io/public/x.css"></head></html>', 'text/html')).primary, 'readme.io');
+  assert.equal(fingerprintFromResponse(fr(200, '<html><head><script>SQUARESPACE_ROLLUPS = {};</script></head></html>', 'text/html')).primary, 'squarespace');
+  assert.equal(fingerprintFromResponse(fr(200, '<html><head><link href="https://static1.squarespace.com/static/x.css"></head></html>', 'text/html')).primary, 'squarespace');
+  assert.equal(fingerprintFromResponse(fr(200, '<html><head><meta name="generator" content="Squarespace"></head></html>', 'text/html')).primary, 'squarespace');
 });
 await t('fingerprint: hubspot/framer/gitbook/webflow in script/link tags are hints, never primary', () => {
   const fp = fingerprintFromResponse(fr(200, '<html><head><script src="https://js.hs-scripts.com/123.js"></script><link href="https://framerusercontent.com/x.css"><a href="https://docs.gitbook.com">gitbook</a><script src="https://assets.webflow.com/x.js"></script></head></html>', 'text/html', { server: 'nginx' }));

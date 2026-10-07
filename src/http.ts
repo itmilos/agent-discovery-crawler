@@ -9,7 +9,7 @@ import { isIP } from 'node:net';
 import { brotliDecompressSync, gunzipSync, inflateSync, inflateRawSync } from 'node:zlib';
 import { getDomain } from 'tldts';
 
-export const CRAWLER_VERSION = '0.6.0';
+export const CRAWLER_VERSION = '0.6.1';
 export const MAX_BODY_BYTES = 2 * 1024 * 1024; // 2 MiB cap per response (post-decoding)
 export const DEFAULT_TIMEOUT_MS = 10_000;
 export const MAX_REDIRECTS = 3;

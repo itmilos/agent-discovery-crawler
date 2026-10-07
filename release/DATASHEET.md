@@ -20,6 +20,7 @@ Code: https://github.com/itmilos/agent-discovery-crawler (MIT). Data licence: CC
 | `radar-2026-10-06.meta.json` | | Vertical corpus selection: category regexes, label counts, category histogram, label-fetch window |
 | `commerce-latest.txt`, `fintech-latest.txt`, `registry-latest.txt` | | The hosts files the three crawls read (rank,host) |
 | `registry-2026-10-07.meta.json`, `registry-2026-10-07.endpoints.jsonl` | | Registry snapshot counts, and every (host, server, endpoint URL, transport) row behind the hosts file |
+| `fingerprint-sample.hosts.jsonl`, `fingerprint-sample.blind.csv`, `fingerprint-sample.score.json` | 560 | Fingerprint precision sample: drawn hosts with predicted label, the blind rating sheet with truth and adjudication notes, and the scores |
 | `*-summary.txt` | | Human-readable summaries used in the paper |
 | `MANIFEST.json` | | SHA-256 and row counts for every data file |
 
@@ -41,7 +42,7 @@ The `hygiene` field (per-host security findings: missing authorization metadata,
 - Tranco ranks DNS popularity, not websites: 23 to 30 percent of hosts in each band have no site at the apex. Report prevalence over reachable hosts.
 - The WebMCP subsample over-weights hosts that publish any other artifact by two to one; the top-1K stratum is a census, the rest is a weighted draw.
 - Stock Chromium exposes no `modelContext` object, so WebMCP registrations are attempted registrations on pages that call the API unconditionally or carry an origin-trial token.
-- Platform fingerprints are heuristic; precision has not yet been measured on a manual sample.
+- Platform fingerprints are heuristic. Measured precision on a 560-host blind sample (`fingerprint-sample.blind.csv`, `fingerprint-sample.score.json`): shopify 100%, wordpress 80%, nextjs 70%, webflow/hugo/ghost/hubspot 100%, framer 95%, docusaurus/gatsby 85%, wix 80%, nuxt 40%, squarespace 35%, nextra and readme.io 0% (substring rules, fixed in crawler 0.6.1; the labels in these files are as crawled).
 
 ## Opting out
 

@@ -21,9 +21,11 @@ const RULES: Rule[] = [
   { label: 'mintlify', html: [/mintlify/i, /_mintlify\//i, /mintcdn\.com/i] },
   { label: 'gitbook', html: [/gitbook/i, /gitbook\.io/i], generator: /gitbook/i },
   { label: 'docusaurus', html: [/docusaurus/i], generator: /docusaurus/i },
-  { label: 'readme.io', html: [/readme\.io|readmeio|cdn\.readme\.io/i] },
+  // 0.6.1: substring rules below were measured at 0% (nextra, readme.io) and 35% (squarespace) precision on the
+  // blind sample (README "Fingerprint precision sample"); they now need an asset path or a bootstrap symbol.
+  { label: 'readme.io', html: [/cdn\.readme\.io\//i, /readmeio\.com\//i, /\breadme-io\b/i] },
   { label: 'fern', html: [/buildwithfern|fern-docs|\bfern\b.*docs/i] },
-  { label: 'nextra', html: [/nextra/i], generator: /nextra/i },
+  { label: 'nextra', html: [/[\/"'`]nextra[\/"'`-]/i, /nextra-theme/i], generator: /nextra/i },
   { label: 'mkdocs', generator: /mkdocs/i, html: [/mkdocs/i] },
   { label: 'hugo', generator: /hugo/i },
   { label: 'gatsby', generator: /gatsby/i, html: [/gatsby-/i] },
@@ -31,7 +33,7 @@ const RULES: Rule[] = [
   { label: 'nuxt', html: [/\/_nuxt\//i, /__NUXT__/] },
   { label: 'webflow', html: [/webflow/i], generator: /webflow/i },
   { label: 'wordpress', html: [/wp-content\//i, /wp-includes\//i], generator: /wordpress/i },
-  { label: 'squarespace', html: [/squarespace/i], generator: /squarespace/i },
+  { label: 'squarespace', html: [/static1?\.squarespace\.com\//i, /squarespace-cdn\.com\//i, /SQUARESPACE_ROLLUPS/], generator: /squarespace/i },
   { label: 'wix', html: [/wix\.com|wixstatic\.com|parastorage\.com/i], generator: /wix/i },
   { label: 'shopify', header: [['x-shopify-stage', null], ['x-shopid', null], ['x-sorting-hat-shopid', null]], html: [/cdn\.shopify\.com/i, /Shopify\.theme/i] },
   { label: 'ghost', generator: /ghost/i },
@@ -41,6 +43,7 @@ const RULES: Rule[] = [
   { label: 'vercel', header: [['x-vercel-id', null], ['x-vercel-cache', null], ['server', /^vercel$/i]] },
   { label: 'netlify', header: [['x-nf-request-id', null], ['server', /netlify/i]] },
   // `server: cloudflare` is the CDN in front of anything; Pages is only inferred from a pages.dev asset origin.
+  // 0.6.1: a pages.dev asset on the page measured 26% precision (widgets hosted on Pages); hint only now.
   { label: 'cloudflare-pages', html: [/https?:\/\/[a-z0-9.-]+\.pages\.dev\//i] },
   { label: 'fastly', header: [['x-served-by', /cache-/i], ['via', /varnish/i], ['x-fastly-request-id', null]] },
   { label: 'akamai', header: [['server', /akamai/i], ['x-akamai-transformed', null], ['x-akamai-request-id', null]] },
@@ -57,7 +60,7 @@ const RULES: Rule[] = [
 
 const CDN_LAYER = new Set(['cloudflare', 'fastly', 'akamai', 'cloudfront']);
 const HOSTING_LAYER = new Set(['vercel', 'netlify', 'cloudflare-pages', 'google-frontend', 'nginx', 'apache', 'iis', 'envoy', 'express', 'php', 'github-pages']);
-const HINT_ONLY_HTML = new Set(['hubspot', 'framer', 'gitbook', 'webflow']);
+const HINT_ONLY_HTML = new Set(['hubspot', 'framer', 'gitbook', 'webflow', 'cloudflare-pages']);
 
 export function extractGenerator(html: string): string | null {
   const m = html.match(/<meta[^>]+name=["']generator["'][^>]*content=["']([^"']+)["']/i) ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]*name=["']generator["']/i);

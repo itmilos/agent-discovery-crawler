@@ -1,0 +1,879 @@
+{
+  "n": 560,
+  "rated": 523,
+  "undecidable": 37,
+  "accuracy": 0.745697896749522,
+  "kappa": 0.73527956645507,
+  "per_label": {
+    "apache": {
+      "predicted": 20,
+      "truth": 21,
+      "tp": 19,
+      "precision": 0.95,
+      "recall": 0.9047619047619048
+    },
+    "astro": {
+      "predicted": 0,
+      "truth": 6,
+      "tp": 0,
+      "precision": null,
+      "recall": 0
+    },
+    "cloudflare-pages": {
+      "predicted": 19,
+      "truth": 5,
+      "tp": 5,
+      "precision": 0.2631578947368421,
+      "recall": 1
+    },
+    "docusaurus": {
+      "predicted": 20,
+      "truth": 17,
+      "tp": 17,
+      "precision": 0.85,
+      "recall": 1
+    },
+    "envoy": {
+      "predicted": 18,
+      "truth": 19,
+      "tp": 17,
+      "precision": 0.9444444444444444,
+      "recall": 0.8947368421052632
+    },
+    "express": {
+      "predicted": 18,
+      "truth": 17,
+      "tp": 16,
+      "precision": 0.8888888888888888,
+      "recall": 0.9411764705882353
+    },
+    "framer": {
+      "predicted": 20,
+      "truth": 20,
+      "tp": 19,
+      "precision": 0.95,
+      "recall": 0.95
+    },
+    "gatsby": {
+      "predicted": 20,
+      "truth": 17,
+      "tp": 17,
+      "precision": 0.85,
+      "recall": 1
+    },
+    "ghost": {
+      "predicted": 20,
+      "truth": 20,
+      "tp": 20,
+      "precision": 1,
+      "recall": 1
+    },
+    "github-pages": {
+      "predicted": 20,
+      "truth": 9,
+      "tp": 9,
+      "precision": 0.45,
+      "recall": 1
+    },
+    "google-frontend": {
+      "predicted": 9,
+      "truth": 9,
+      "tp": 9,
+      "precision": 1,
+      "recall": 1
+    },
+    "hubspot": {
+      "predicted": 20,
+      "truth": 22,
+      "tp": 20,
+      "precision": 1,
+      "recall": 0.9090909090909091
+    },
+    "hugo": {
+      "predicted": 20,
+      "truth": 20,
+      "tp": 20,
+      "precision": 1,
+      "recall": 1
+    },
+    "iis": {
+      "predicted": 19,
+      "truth": 22,
+      "tp": 19,
+      "precision": 1,
+      "recall": 0.8636363636363636
+    },
+    "mkdocs": {
+      "predicted": 0,
+      "truth": 1,
+      "tp": 0,
+      "precision": null,
+      "recall": 0
+    },
+    "netlify": {
+      "predicted": 20,
+      "truth": 16,
+      "tp": 14,
+      "precision": 0.7,
+      "recall": 0.875
+    },
+    "nextjs": {
+      "predicted": 20,
+      "truth": 23,
+      "tp": 14,
+      "precision": 0.7,
+      "recall": 0.6086956521739131
+    },
+    "nextra": {
+      "predicted": 20,
+      "truth": 0,
+      "tp": 0,
+      "precision": 0,
+      "recall": null
+    },
+    "nginx": {
+      "predicted": 17,
+      "truth": 23,
+      "tp": 17,
+      "precision": 1,
+      "recall": 0.7391304347826086
+    },
+    "nuxt": {
+      "predicted": 20,
+      "truth": 8,
+      "tp": 8,
+      "precision": 0.4,
+      "recall": 1
+    },
+    "php": {
+      "predicted": 17,
+      "truth": 18,
+      "tp": 16,
+      "precision": 0.9411764705882353,
+      "recall": 0.8888888888888888
+    },
+    "readme.io": {
+      "predicted": 20,
+      "truth": 0,
+      "tp": 0,
+      "precision": 0,
+      "recall": null
+    },
+    "shopify": {
+      "predicted": 20,
+      "truth": 20,
+      "tp": 20,
+      "precision": 1,
+      "recall": 1
+    },
+    "squarespace": {
+      "predicted": 20,
+      "truth": 7,
+      "tp": 7,
+      "precision": 0.35,
+      "recall": 1
+    },
+    "unknown": {
+      "predicted": 28,
+      "truth": 98,
+      "tp": 27,
+      "precision": 0.9642857142857143,
+      "recall": 0.2755102040816326
+    },
+    "vercel": {
+      "predicted": 18,
+      "truth": 9,
+      "tp": 8,
+      "precision": 0.4444444444444444,
+      "recall": 0.8888888888888888
+    },
+    "webflow": {
+      "predicted": 20,
+      "truth": 30,
+      "tp": 20,
+      "precision": 1,
+      "recall": 0.6666666666666666
+    },
+    "wix": {
+      "predicted": 20,
+      "truth": 18,
+      "tp": 16,
+      "precision": 0.8,
+      "recall": 0.8888888888888888
+    },
+    "wordpress": {
+      "predicted": 20,
+      "truth": 28,
+      "tp": 16,
+      "precision": 0.8,
+      "recall": 0.5714285714285714
+    }
+  },
+  "confusions": [
+    {
+      "host": "starbucks.fr",
+      "predicted": "nextra",
+      "truth": "nextjs"
+    },
+    {
+      "host": "adslzone.net",
+      "predicted": "nuxt",
+      "truth": "unknown"
+    },
+    {
+      "host": "fast.ai",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "esphome.io",
+      "predicted": "readme.io",
+      "truth": "astro"
+    },
+    {
+      "host": "igennos.store",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "billbee.io",
+      "predicted": "squarespace",
+      "truth": "webflow"
+    },
+    {
+      "host": "streak.com",
+      "predicted": "readme.io",
+      "truth": "webflow"
+    },
+    {
+      "host": "maplibre.org",
+      "predicted": "github-pages",
+      "truth": "astro"
+    },
+    {
+      "host": "ramp.com",
+      "predicted": "vercel",
+      "truth": "nextjs"
+    },
+    {
+      "host": "btorrent.xyz",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "getsitecontrol.com",
+      "predicted": "squarespace",
+      "truth": "unknown"
+    },
+    {
+      "host": "tdea.edu.co",
+      "predicted": "cloudflare-pages",
+      "truth": "wordpress"
+    },
+    {
+      "host": "pulsonline.rs",
+      "predicted": "express",
+      "truth": "astro"
+    },
+    {
+      "host": "qiscus.com",
+      "predicted": "php",
+      "truth": "wordpress"
+    },
+    {
+      "host": "directo.ee",
+      "predicted": "gatsby",
+      "truth": "wordpress"
+    },
+    {
+      "host": "marq.com",
+      "predicted": "readme.io",
+      "truth": "wordpress"
+    },
+    {
+      "host": "aldebaran.one",
+      "predicted": "nextra",
+      "truth": "nextjs"
+    },
+    {
+      "host": "simplified.com",
+      "predicted": "readme.io",
+      "truth": "unknown"
+    },
+    {
+      "host": "tunnelbear.com",
+      "predicted": "netlify",
+      "truth": "unknown"
+    },
+    {
+      "host": "getgreenshot.org",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "paperform.co",
+      "predicted": "readme.io",
+      "truth": "nginx"
+    },
+    {
+      "host": "3ds.com",
+      "predicted": "nuxt",
+      "truth": "unknown"
+    },
+    {
+      "host": "salidzini.lv",
+      "predicted": "wix",
+      "truth": "unknown"
+    },
+    {
+      "host": "cjdropshipping.com",
+      "predicted": "squarespace",
+      "truth": "unknown"
+    },
+    {
+      "host": "mathjax.org",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "palermo.edu",
+      "predicted": "squarespace",
+      "truth": "apache"
+    },
+    {
+      "host": "laut.fm",
+      "predicted": "nextra",
+      "truth": "unknown"
+    },
+    {
+      "host": "tchibo.pl",
+      "predicted": "nuxt",
+      "truth": "envoy"
+    },
+    {
+      "host": "snob.ru",
+      "predicted": "nuxt",
+      "truth": "express"
+    },
+    {
+      "host": "peppalearning.com",
+      "predicted": "nuxt",
+      "truth": "unknown"
+    },
+    {
+      "host": "showpass.com",
+      "predicted": "nextjs",
+      "truth": "unknown"
+    },
+    {
+      "host": "jdx.dev",
+      "predicted": "netlify",
+      "truth": "unknown"
+    },
+    {
+      "host": "autobazar.eu",
+      "predicted": "nextjs",
+      "truth": "unknown"
+    },
+    {
+      "host": "maseno.ac.ke",
+      "predicted": "cloudflare-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "kuranvemeali.com",
+      "predicted": "wordpress",
+      "truth": "unknown"
+    },
+    {
+      "host": "bonaslot-2026.guru",
+      "predicted": "cloudflare-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "mobirise.com",
+      "predicted": "squarespace",
+      "truth": "unknown"
+    },
+    {
+      "host": "visitdenver.com",
+      "predicted": "nextra",
+      "truth": "unknown"
+    },
+    {
+      "host": "thebash.com",
+      "predicted": "gatsby",
+      "truth": "unknown"
+    },
+    {
+      "host": "jamieoliver.com",
+      "predicted": "netlify",
+      "truth": "astro"
+    },
+    {
+      "host": "uwhealth.org",
+      "predicted": "nextjs",
+      "truth": "netlify"
+    },
+    {
+      "host": "danluu.com",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "maventrading.com",
+      "predicted": "vercel",
+      "truth": "astro"
+    },
+    {
+      "host": "centris.ca",
+      "predicted": "squarespace",
+      "truth": "unknown"
+    },
+    {
+      "host": "mcpedl.com",
+      "predicted": "nuxt",
+      "truth": "unknown"
+    },
+    {
+      "host": "bidtheatre.com",
+      "predicted": "readme.io",
+      "truth": "webflow"
+    },
+    {
+      "host": "alaskantf.com",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "cookiechimp.com",
+      "predicted": "wix",
+      "truth": "unknown"
+    },
+    {
+      "host": "floorplanner.com",
+      "predicted": "readme.io",
+      "truth": "wordpress"
+    },
+    {
+      "host": "cloudresearch.com",
+      "predicted": "vercel",
+      "truth": "astro"
+    },
+    {
+      "host": "hedra.com",
+      "predicted": "nextra",
+      "truth": "nextjs"
+    },
+    {
+      "host": "meinprospekt.de",
+      "predicted": "nextra",
+      "truth": "unknown"
+    },
+    {
+      "host": "workable.com",
+      "predicted": "readme.io",
+      "truth": "unknown"
+    },
+    {
+      "host": "soundhound.com",
+      "predicted": "cloudflare-pages",
+      "truth": "webflow"
+    },
+    {
+      "host": "respublika.lt",
+      "predicted": "nextra",
+      "truth": "nginx"
+    },
+    {
+      "host": "openweb.com",
+      "predicted": "readme.io",
+      "truth": "wordpress"
+    },
+    {
+      "host": "bbbserver.de",
+      "predicted": "squarespace",
+      "truth": "unknown"
+    },
+    {
+      "host": "home-assistant.io",
+      "predicted": "readme.io",
+      "truth": "unknown"
+    },
+    {
+      "host": "koalendar.com",
+      "predicted": "squarespace",
+      "truth": "unknown"
+    },
+    {
+      "host": "bwin.com",
+      "predicted": "nextra",
+      "truth": "unknown"
+    },
+    {
+      "host": "booking.com",
+      "predicted": "envoy",
+      "truth": "wordpress"
+    },
+    {
+      "host": "hacs.xyz",
+      "predicted": "readme.io",
+      "truth": "mkdocs"
+    },
+    {
+      "host": "deno.com",
+      "predicted": "docusaurus",
+      "truth": "unknown"
+    },
+    {
+      "host": "example3.com",
+      "predicted": "cloudflare-pages",
+      "truth": "php"
+    },
+    {
+      "host": "jina.ai",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "hollywoodbets.co.mz",
+      "predicted": "nextra",
+      "truth": "iis"
+    },
+    {
+      "host": "supercitygame.com",
+      "predicted": "nextra",
+      "truth": "unknown"
+    },
+    {
+      "host": "musicbusinessworldwide.com",
+      "predicted": "wordpress",
+      "truth": "unknown"
+    },
+    {
+      "host": "nine.ch",
+      "predicted": "docusaurus",
+      "truth": "unknown"
+    },
+    {
+      "host": "b2match.com",
+      "predicted": "nextjs",
+      "truth": "unknown"
+    },
+    {
+      "host": "haui.edu.vn",
+      "predicted": "wix",
+      "truth": "iis"
+    },
+    {
+      "host": "ror.org",
+      "predicted": "readme.io",
+      "truth": "vercel"
+    },
+    {
+      "host": "securityscorecard.com",
+      "predicted": "readme.io",
+      "truth": "unknown"
+    },
+    {
+      "host": "karaoketexty.cz",
+      "predicted": "wordpress",
+      "truth": "unknown"
+    },
+    {
+      "host": "lotoklub-37.org",
+      "predicted": "nuxt",
+      "truth": "unknown"
+    },
+    {
+      "host": "rabancosmos.com",
+      "predicted": "cloudflare-pages",
+      "truth": "php"
+    },
+    {
+      "host": "unica.it",
+      "predicted": "apache",
+      "truth": "wordpress"
+    },
+    {
+      "host": "ebi.ac.uk",
+      "predicted": "wordpress",
+      "truth": "apache"
+    },
+    {
+      "host": "biu.ac.il",
+      "predicted": "unknown",
+      "truth": "wordpress"
+    },
+    {
+      "host": "educart.co",
+      "predicted": "cloudflare-pages",
+      "truth": "webflow"
+    },
+    {
+      "host": "helloretail.com",
+      "predicted": "netlify",
+      "truth": "hubspot"
+    },
+    {
+      "host": "paodayag.dev",
+      "predicted": "netlify",
+      "truth": "unknown"
+    },
+    {
+      "host": "spaceweather.com",
+      "predicted": "squarespace",
+      "truth": "nginx"
+    },
+    {
+      "host": "wake.tech",
+      "predicted": "readme.io",
+      "truth": "unknown"
+    },
+    {
+      "host": "tinywow.com",
+      "predicted": "squarespace",
+      "truth": "unknown"
+    },
+    {
+      "host": "270towin.com",
+      "predicted": "vercel",
+      "truth": "unknown"
+    },
+    {
+      "host": "kaktusapp.com",
+      "predicted": "squarespace",
+      "truth": "webflow"
+    },
+    {
+      "host": "mistral.ai",
+      "predicted": "netlify",
+      "truth": "unknown"
+    },
+    {
+      "host": "yono-tv.net",
+      "predicted": "cloudflare-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "getflex.com",
+      "predicted": "cloudflare-pages",
+      "truth": "webflow"
+    },
+    {
+      "host": "apotheken-umschau.de",
+      "predicted": "readme.io",
+      "truth": "unknown"
+    },
+    {
+      "host": "racing.com",
+      "predicted": "nextra",
+      "truth": "unknown"
+    },
+    {
+      "host": "utorrent.com",
+      "predicted": "gatsby",
+      "truth": "unknown"
+    },
+    {
+      "host": "meccabingo.com",
+      "predicted": "cloudflare-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "targetsportsusa.com",
+      "predicted": "nextra",
+      "truth": "iis"
+    },
+    {
+      "host": "rive.app",
+      "predicted": "wix",
+      "truth": "framer"
+    },
+    {
+      "host": "lobehub.com",
+      "predicted": "vercel",
+      "truth": "unknown"
+    },
+    {
+      "host": "idosell.com",
+      "predicted": "readme.io",
+      "truth": "unknown"
+    },
+    {
+      "host": "prospeo.io",
+      "predicted": "nextra",
+      "truth": "nextjs"
+    },
+    {
+      "host": "certik.com",
+      "predicted": "vercel",
+      "truth": "unknown"
+    },
+    {
+      "host": "4kidsgames.com",
+      "predicted": "nuxt",
+      "truth": "unknown"
+    },
+    {
+      "host": "healthday.com",
+      "predicted": "express",
+      "truth": "nextjs"
+    },
+    {
+      "host": "goat-lab.app",
+      "predicted": "vercel",
+      "truth": "unknown"
+    },
+    {
+      "host": "frankfurter.dev",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "jonitogel83.com",
+      "predicted": "cloudflare-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "tipsy.chat",
+      "predicted": "vercel",
+      "truth": "nextjs"
+    },
+    {
+      "host": "superfrete.com",
+      "predicted": "readme.io",
+      "truth": "hubspot"
+    },
+    {
+      "host": "reo.dev",
+      "predicted": "docusaurus",
+      "truth": "webflow"
+    },
+    {
+      "host": "nimbushosting.co.uk",
+      "predicted": "readme.io",
+      "truth": "wordpress"
+    },
+    {
+      "host": "dropbox.com",
+      "predicted": "nextra",
+      "truth": "envoy"
+    },
+    {
+      "host": "sendlane.com",
+      "predicted": "squarespace",
+      "truth": "webflow"
+    },
+    {
+      "host": "toptop.net",
+      "predicted": "nuxt",
+      "truth": "nginx"
+    },
+    {
+      "host": "brainpop.com",
+      "predicted": "nuxt",
+      "truth": "nginx"
+    },
+    {
+      "host": "littledata.io",
+      "predicted": "nextjs",
+      "truth": "netlify"
+    },
+    {
+      "host": "contobox.com",
+      "predicted": "nextra",
+      "truth": "wix"
+    },
+    {
+      "host": "europeantour.com",
+      "predicted": "nextra",
+      "truth": "unknown"
+    },
+    {
+      "host": "zight.com",
+      "predicted": "squarespace",
+      "truth": "wordpress"
+    },
+    {
+      "host": "productplan.com",
+      "predicted": "readme.io",
+      "truth": "webflow"
+    },
+    {
+      "host": "arabianoud.com",
+      "predicted": "cloudflare-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "instant.so",
+      "predicted": "framer",
+      "truth": "nextjs"
+    },
+    {
+      "host": "mangaraw.co.uk",
+      "predicted": "cloudflare-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "apptornado.com",
+      "predicted": "cloudflare-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "tradingsat.com",
+      "predicted": "nextra",
+      "truth": "unknown"
+    },
+    {
+      "host": "scan.page",
+      "predicted": "vercel",
+      "truth": "unknown"
+    },
+    {
+      "host": "outfit7.com",
+      "predicted": "nuxt",
+      "truth": "unknown"
+    },
+    {
+      "host": "thisoldhouse.com",
+      "predicted": "nextra",
+      "truth": "wordpress"
+    },
+    {
+      "host": "sportsshoes.com",
+      "predicted": "nextjs",
+      "truth": "unknown"
+    },
+    {
+      "host": "highlightjs.org",
+      "predicted": "nextra",
+      "truth": "nextjs"
+    },
+    {
+      "host": "openlayers.org",
+      "predicted": "github-pages",
+      "truth": "unknown"
+    },
+    {
+      "host": "oskelly.ru",
+      "predicted": "nuxt",
+      "truth": "unknown"
+    },
+    {
+      "host": "scanned.page",
+      "predicted": "vercel",
+      "truth": "unknown"
+    },
+    {
+      "host": "statres.com",
+      "predicted": "nextra",
+      "truth": "wix"
+    },
+    {
+      "host": "openexchangerates.org",
+      "predicted": "readme.io",
+      "truth": "nginx"
+    }
+  ]
+}
