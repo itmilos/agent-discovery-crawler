@@ -1,6 +1,6 @@
 {
   "name": "agent-discovery-crawler",
-  "version": "0.4.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -22,7 +22,15 @@
     "crawl:tranco100k": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/tranco-latest-10k-100k.txt --out out/tranco-10k-100k-local.jsonl --vantage local --concurrency 40 --rps-per-host 1 --progress",
     "webmcp": "tsx src/webmcp-run.ts",
     "webmcp:fixtures": "CRAWLER_FIXTURE_PORT=8787 tsx src/webmcp-run.ts --hosts hosts/webmcp-fixtures.txt --out out/webmcp-fixtures.jsonl --scheme http --concurrency 2 --pages 4",
-    "corpus:webmcp-sample": "tsx src/corpus/subsample.ts"
+    "corpus:webmcp-sample": "tsx src/corpus/subsample.ts",
+    "corpus:registry": "tsx src/corpus/registry.ts",
+    "corpus:radar": "tsx src/corpus/radar.ts",
+    "crawl:registry": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/registry-latest.txt --out out/registry-local.jsonl --vantage local --concurrency 20 --rps-per-host 1 --progress",
+    "crawl:commerce": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/commerce-latest.txt --out out/commerce-local.jsonl --vantage local --concurrency 20 --rps-per-host 1 --progress",
+    "crawl:fintech": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/fintech-latest.txt --out out/fintech-local.jsonl --vantage local --concurrency 20 --rps-per-host 1 --progress",
+    "handshake": "tsx src/handshake-run.ts",
+    "handshake:fixtures": "CRAWLER_FIXTURE_PORT=8787 tsx src/handshake-run.ts --in out/fixtures.jsonl --out out/handshake-fixtures.jsonl --scheme http --rps 50 --i-have-read-the-ethics-section",
+    "disclosure": "tsx src/disclosure.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1",

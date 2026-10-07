@@ -14,6 +14,12 @@ Code: https://github.com/itmilos/agent-discovery-crawler (MIT). Data licence: CC
 | `webmcp-sample.jsonl.gz` | 4,999 | Headless-Chromium WebMCP pass over a 5,000-host stratified subsample |
 | `tranco-647LX.meta.json` | | Corpus build metadata: list id, download time, band counts, dedupe losses |
 | `webmcp-sample.meta.json` | | Subsample seed, weights and strata |
+| `commerce-local.jsonl.gz` | 7,810 | Commerce corpus: Tranco top-100K hosts with a Cloudflare shopping-type content category, HTTP probes, 2026-10-06 |
+| `fintech-local.jsonl.gz` | 4,050 | Fintech corpus: Tranco top-100K hosts with a Cloudflare finance-type content category, 2026-10-06 |
+| `registry-local.jsonl.gz` | 17,238 | MCP-registry corpus: hostnames named as remote endpoints by the official MCP registry (snapshot 2026-10-06), 2026-10-07 |
+| `radar-2026-10-06.meta.json` | | Vertical corpus selection: category regexes, label counts, category histogram, label-fetch window |
+| `commerce-latest.txt`, `fintech-latest.txt`, `registry-latest.txt` | | The hosts files the three crawls read (rank,host) |
+| `registry-2026-10-07.meta.json`, `registry-2026-10-07.endpoints.jsonl` | | Registry snapshot counts, and every (host, server, endpoint URL, transport) row behind the hosts file |
 | `*-summary.txt` | | Human-readable summaries used in the paper |
 | `MANIFEST.json` | | SHA-256 and row counts for every data file |
 

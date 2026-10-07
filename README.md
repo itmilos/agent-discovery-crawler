@@ -1,22 +1,14 @@
 # agent-discovery-crawler
 
-
-Measurement crawler for the agent-discovery layer (paper §4: *Supply Without Demand: Measuring
-Agent-Discovery Artifacts on the Web*), v0.4.0 (adds the WebMCP headless module, the 5K WebMCP
-subsample builder and band sharding; see "Changes in 0.4.0" at the end).
+Measurement crawler for the agent-discovery layer (paper §4: *Nobody's Home at
+`/.well-known`*), v0.5.0 (adds the MCP `initialize` handshake probe (§4.6e)
+behind an ethics gate, the coordinated-disclosure tooling, and two reporting
+fixes; see "Changes in 0.5.0" at the end).
 For each host it fetches the
 fourteen canonical discovery paths in random order plus two random nonexistent
 paths (SimHash soft-404 baseline), validates each artifact,
 fingerprints the hosting platform from the homepage, and runs endpoint/OAuth
 hygiene checks on any valid MCP/A2A card or protected-resource document.
-
-## Data
-
-Crawl results (Tranco list 647LX top 100K, WebMCP subsample) are published as gzipped JSONL, with a datasheet and SHA-256 manifest, in this Google Drive folder:
-
-https://drive.google.com/drive/folders/1jLDzuVje_Y-iQqP0YApaoULo0-PfpmhL
-
-Per-host security findings (`hygiene`) are withheld until coordinated disclosure completes; see `release/DATASHEET.md`. A Zenodo DOI will replace the Drive link at publication.
 
 Node.js >= 20, TypeScript. Dependencies: `undici` (HTTP + proxy agent), `ajv`
 (JSON structural checks), `yaml` (OpenAPI YAML), `p-limit` (host concurrency),
@@ -28,9 +20,9 @@ Chromium install).
 ## Install / run
 
 ```sh
-npm install                    # 0.4.0 adds playwright-core: run this again after upgrading
+npm install                    # no new dependency in 0.5.0; needed once after 0.4.0 (playwright-core)
 npx playwright-core install chromium   # one-time, ~150 MB, only needed for the WebMCP module (or set CRAWLER_CHROMIUM_PATH to any Chromium/Chrome binary)
-npm test                       # self-test: validators, soft-404 rules, fingerprints, blocked rule, summarizer, Tranco loader, HTTP layer on a loopback server, robots/links/origin-trial helpers, subsample, and the WebMCP shim in headless Chromium against the in-process fixture server (74 checks, no external network; the 6 browser checks are skipped with a notice when no Chromium is installed)
+npm test                       # self-test: validators, soft-404 rules, fingerprints, blocked rule, summarizer, Tranco loader, HTTP layer on a loopback server, robots/links/origin-trial helpers, subsample, the handshake probe + disclosure builder against the in-process fixture server, and the WebMCP shim in headless Chromium (88 checks, no external network; the 6 browser checks are skipped with a notice when no Chromium is installed)
 export CRAWLER_CONTACT_URL=https://your-lab.example/crawler   # required for any non-fixture corpus
 export CRAWLER_CONTACT_EMAIL=crawler-optout@your-lab.example  # required for any non-fixture corpus
 npm run crawl -- --hosts hosts/smoke.txt --out out/smoke-us.jsonl --vantage us --concurrency 20 --rps-per-host 1
@@ -42,6 +34,9 @@ npm run crawl:tranco10k        # 1K-10K band -> out/tranco-1k-10k-local.jsonl
 npm run crawl:tranco100k       # 10K-100K band -> out/tranco-10k-100k-local.jsonl, 40 in flight (split it with --shard, see "Sharding a band")
 npm run corpus:webmcp-sample   # 5,000-host WebMCP subsample from the results files -> hosts/webmcp-sample.txt (+ .meta.json)
 npm run webmcp -- --hosts hosts/webmcp-sample.txt --out out/webmcp-sample.jsonl --concurrency 4 --pages 4   # headless WebMCP module
+npm run handshake -- --in out/tranco-1-1k-local.jsonl --dry-run                                   # list the MCP endpoints the probe WOULD contact (contacts nothing)
+npm run handshake -- --in out/tranco-*-local.jsonl --out out/handshake.jsonl --rps 1 --i-have-read-the-ethics-section   # one initialize per endpoint (see "Handshake probe")
+npm run disclosure -- --in out/handshake.jsonl --results out/tranco-*-local.jsonl --out release/disclosure/   # findings.csv, email-template.md, summary.md
 ```
 
 Every `crawl` prints a start banner (version, host counts, vantage,
@@ -50,7 +45,7 @@ concurrency, rps, timeout, the User-Agent, and an estimated duration =
 included) before the first request.
 
 **Identity (§4.9).** The User-Agent is
-`AgentDiscoveryCrawler/0.3 (+$CRAWLER_CONTACT_URL; research; opt-out: mailto:$CRAWLER_CONTACT_EMAIL)`.
+`AgentDiscoveryCrawler/0.6 (+$CRAWLER_CONTACT_URL; research; opt-out: mailto:$CRAWLER_CONTACT_EMAIL)`.
 Both variables must be set; the CLI refuses to start against any host list
 that is not entirely `*.fixture` hosts when either is missing (exit 2). The
 `crawl` and `crawl:*` scripts set `UV_THREADPOOL_SIZE=64` so DNS lookups and
@@ -101,7 +96,7 @@ from the reachable denominator.
 ### Local end-to-end fixtures
 
 ```sh
-npm run fixtures &             # http://127.0.0.1:8787, nine virtual hosts (seven HTTP-crawl ones + two WebMCP ones)
+npm run fixtures &             # http://127.0.0.1:8787, thirteen virtual hosts (seven HTTP-crawl ones, four handshake ones, two WebMCP ones)
 npm run crawl:fixtures         # = CRAWLER_FIXTURE_PORT=8787 tsx src/run.ts --hosts hosts/fixtures.txt --out out/fixtures.jsonl --scheme http --rps-per-host 50 --vantage local
 npm run summarize -- out/fixtures.jsonl
 ```
@@ -116,7 +111,10 @@ only, an llms-full.txt whose H1 is not the first line), `blocked.fixture` is a
 Cloudflare-style challenge wall, `empty.fixture` 404s, `redirect.fixture`
 301s every path to another domain (`redirect_only`), `apex.fixture` 301s
 every path to `www.apex.fixture`, which serves a valid `llms.txt` and
-`security.txt` (`www_redirect: true`, not `cross_origin_hit`); `webmcp.fixture`
+`security.txt` (`www_redirect: true`, not `cross_origin_hit`);
+`mcp-public.fixture`, `mcp-sse.fixture`, `mcp-protected.fixture` and
+`mcp-html.fixture` each publish a card whose endpoint answers `initialize`
+differently (see "Handshake probe"; `npm run handshake:fixtures`); `webmcp.fixture`
 and `webmcp-none.fixture` belong to the WebMCP module (`hosts/webmcp-fixtures.txt`,
 `npm run webmcp:fixtures`; see below). Hosts ending in
 `.fixture` are routed to `127.0.0.1:$CRAWLER_FIXTURE_PORT` with the original
@@ -248,8 +246,196 @@ card and protected-resource doc on non-blocked hosts:
 - `Strict-Transport-Security` on the card response (`hsts`, note
   `no_hsts_on_card`) and `Cache-Control` recorded.
 
-§4.6(e), unauthenticated MCP `initialize`, is **not** sent in this pass: the
-field `mcp_unauthenticated_initialize` is always `null` (see TODO).
+§4.6(e), unauthenticated MCP `initialize`, is **not** sent by `crawl`: the
+inline field `mcp_unauthenticated_initialize` stays `null`. It is a separate,
+gated pass over the crawl results (`npm run handshake`, below) that writes its
+own file, so the handshake can be run (or not) independently of the crawl and
+the disclosure clock starts from a known date.
+
+## Handshake probe (paper §4.6e) — 0.5.0
+
+```sh
+npm run handshake -- --in out/tranco-1-1k-local.jsonl --dry-run                       # prints the target list; contacts nothing; no gate
+export CRAWLER_CONTACT_URL=https://your-lab.example/crawler CRAWLER_CONTACT_EMAIL=crawler-optout@your-lab.example
+npm run handshake -- --in out/tranco-1-1k-local.jsonl out/tranco-1k-10k-local.jsonl out/tranco-10k-100k-local.jsonl --out out/handshake.jsonl --rps 1 --i-have-read-the-ethics-section
+npm run fixtures &  &&  npm run crawl:fixtures  &&  npm run handshake:fixtures   # end to end on the four mcp-*.fixture vhosts -> out/handshake-fixtures.jsonl
+```
+
+> Paper §4.6 (ethics-reviewed): *For MCP endpoints advertised in a valid card,
+> and only those, we send one JSON-RPC `initialize` request without
+> credentials. This is the step the MCP authorization specification tells
+> clients to take before discovering metadata. We record the HTTP status, the
+> `WWW-Authenticate` header and `serverInfo`, close any returned session with
+> `DELETE`, and send nothing further. A 200 is classified as 'no authorization
+> challenge at handshake'. We make no claim about whether tools can be invoked.*
+
+The CLI prints this paragraph before doing anything.
+
+### Ethics gate
+
+A real run refuses to start (exit 2) unless **both** hold: `CRAWLER_CONTACT_URL`
+and `CRAWLER_CONTACT_EMAIL` are set (same rule as `crawl`; waived only when
+every target host is a `*.fixture`), **and** `--i-have-read-the-ethics-section`
+is on the command line. `--dry-run` needs neither because it contacts nobody:
+it lists every (host, endpoint) the real run would probe, one per line
+(`host<TAB>rank<TAB>source<TAB>endpoint`), and flags hosts whose endpoint is
+not yet known (`card re-fetch needed`). Run it first and read the list.
+
+### Targets
+
+Input is one or more `crawl` results files. A host is a target only when its
+`mcp_card_path` is non-null (a *valid* MCP card was served). The endpoint URL is
+taken from the hygiene entries of kind `mcp` (`endpoint.url`, which is
+SEP-2127 `remotes[0].url` or SEP-1649 `url`/`transport.url`); when hygiene did
+not record one (crawled with `--no-hygiene`, or the host was blocked at crawl
+time, or the card had no URL) the card is re-fetched once (one `GET`, through
+the limiter) and **every** `remotes[].url` plus the SEP-1649 URL is taken.
+Endpoints from valid **A2A** cards are included only if they look like MCP
+endpoints: same URL as an MCP card endpoint, or last path segment `mcp`; all
+other A2A endpoints are skipped and counted (`a2a_skipped` in the banner), and
+a host with an A2A card but no valid MCP card is never a target. Duplicate
+(host, endpoint) pairs across files are probed once; rows already present in
+`--out` are skipped, so a stopped run resumes.
+
+### What it sends — and never sends
+
+Per endpoint, in this order and nothing else:
+
+1. **One** `POST <endpoint>` with body
+   `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"AgentDiscoveryCrawler","version":"0.6.0"}}}`
+   and headers `Accept: application/json, text/event-stream`,
+   `Content-Type: application/json`, `MCP-Protocol-Version: 2025-11-25`,
+   `Mcp-Method: initialize`, the crawler User-Agent. **No `Authorization`, no
+   cookie, no token, ever.** 10 s timeout (`--timeout-ms`), 2 MiB cap; an SSE
+   response is read up to the first event carrying data and then aborted, so a
+   server that keeps the stream open does not hold the probe. A 307/308 is
+   followed within the registrable domain (method preserved); a 301/302/303 is
+   recorded, not followed (it would turn the POST into a GET).
+2. **Only if** the response carried `Mcp-Session-Id`: one `DELETE <endpoint>`
+   with that header (and `MCP-Protocol-Version`), the spec's way to close a
+   session we were handed. Its status is recorded (`405` = server does not let
+   clients terminate sessions; still fine).
+3. **Only if** the response was a 401 whose `WWW-Authenticate` names a
+   `resource_metadata` URL: one `GET` of that URL (RFC 9728 metadata, a public
+   document) to record whether it resolves and whether it is the same document
+   hygiene already found for the endpoint (`matches_hygiene_prm`). Disable with
+   `--no-resource-metadata`.
+
+No `notifications/initialized`, no `tools/list`, no `tools/call`, no GET to
+the MCP endpoint, no second `initialize`, no retry. The self-test asserts this
+against the fixture server's request log (exactly one POST per endpoint, every
+POST body is `initialize`, DELETE exactly once per issued session, no
+`Authorization` header on any request, nothing else). All requests go through
+the global per-host limiter (`--rps`, default 1).
+
+### Output (`out/handshake.jsonl`, one row per endpoint)
+
+```jsonc
+{
+  "host": "mcp.example.com", "rank": 1234, "source": "mcp_card",            // or "a2a_card" (+ "a2a_reason")
+  "card_path": "/.well-known/mcp-server-card", "endpoint": "https://mcp.example.com/mcp",
+  "ts": "...", "crawler_version": "0.6.0", "protocol_version_sent": "2025-11-25",
+  "request": { "method": "POST", "jsonrpc_method": "initialize", "headers": ["accept", "content-type", "user-agent", "mcp-protocol-version", "mcp-method"], "authorization_sent": false },
+  "status": 401, "error": null, "final_url": "https://mcp.example.com/mcp", "content_type": "application/json", "elapsed_ms": 212,
+  "www_authenticate": { "raw": "Bearer resource_metadata=\"https://mcp.example.com/.well-known/oauth-protected-resource/mcp\"", "scheme": "Bearer", "realm": null, "resource_metadata": "https://mcp.example.com/.well-known/oauth-protected-resource/mcp", "error": null, "error_description": null, "scope": null },
+  "mcp_session_id_present": false,
+  "body_kind": "json",                     // json | sse | html | text | empty | other
+  "jsonrpc": false,                        // body (or first SSE event) is a JSON-RPC message
+  "result": null,                          // on success: { "protocol_version", "server_info": { "name", "version" }, "capabilities_keys": ["tools", ...], "instructions_present" }
+  "jsonrpc_error": null,                   // { "code", "message", "data_keys" } when the body is a JSON-RPC error
+  "classification": "challenge_401",
+  "session_delete": null,                  // { "sent": true, "status": 204, "error": null } when a session id was issued
+  "resource_metadata": { "url": "...", "status": 200, "error": null, "resolves": true, "is_prm": true, "matches_hygiene_prm": true, "hygiene_prm_urls": ["..."] },
+  "requests_made": ["POST https://mcp.example.com/mcp", "GET https://mcp.example.com/.well-known/oauth-protected-resource/mcp"]
+}
+```
+
+### Classification
+
+| `classification` | rule | reading |
+|---|---|---|
+| `challenge_401` | 401 with a `WWW-Authenticate` header | the spec'd path: client goes to `resource_metadata` (or the default PRM location) and the OAuth flow |
+| `challenge_401_no_header` | 401 without `WWW-Authenticate` | auth required, but the client is not told where (MCP auth spec / RFC 9728 §5.1 want the header) |
+| `forbidden_403` | 403 | refused outright (Origin check, WAF, IP policy) |
+| `no_challenge_200` | 2xx and the body (JSON, or the first SSE event) is a JSON-RPC `result` | **no authorization challenge at handshake** — `initialize` succeeded without credentials; nothing is claimed about tools |
+| `jsonrpc_error_200` | 2xx with a JSON-RPC `error` | an MCP server that refused `initialize` at the protocol level (e.g. unsupported version) |
+| `not_mcp` | 2xx that is not a JSON-RPC message (HTML, empty, 202/204) | the advertised URL is not an MCP endpoint (card points at a web page, a notification sink, ...) |
+| `modern_no_initialize` | 400 or 404 whose body is a JSON-RPC error | a server on protocol revision 2026-07-28, which has **no** `initialize` method (`-32601` on 404, or `UnsupportedProtocolVersionError` on 400); see the note below |
+| `redirect_3xx` | 301/302/303, or too many 307/308 hops | not followed for a POST |
+| `error_4xx` / `error_5xx` | any other 4xx / 5xx (404 without a JSON-RPC body, 405, 429, 5xx) | |
+| `unreachable` | no HTTP response (`error`: dns, refused, timeout, tls, reset, proxy_denied, cross_domain_redirect) | |
+
+### What the spec says today (verified 2026-10-06) — a note for the paper
+
+The current ("latest") MCP specification is revision **2026-07-28**, and it
+**removed the `initialize` handshake and protocol-level sessions** from
+Streamable HTTP: every POST is self-describing (protocol version, client info
+and capabilities travel in `params._meta`, mirrored into `MCP-Protocol-Version`
+/ `Mcp-Method` / `Mcp-Name` headers), there is no `Mcp-Session-Id`, no GET
+stream, and a DELETE to the endpoint gets `405`. A 2026-07-28-only server
+answers our `initialize` with `404` + JSON-RPC `-32601` (method not found) or
+`400` + `UnsupportedProtocolVersionError`; the probe files that as
+`modern_no_initialize`. The paper's §4.6 wording ("the step the MCP
+authorization specification tells clients to take before discovering
+metadata", "close any returned session with DELETE") describes protocol
+revisions 2025-03-26 through **2025-11-25**, which is what nearly every deployed
+remote MCP server speaks in 2026 and what the SEP-2127 card's
+`remotes[].type: "streamable-http"` currently means. The probe therefore
+speaks 2025-11-25 (`protocolVersion` in the body and the
+`MCP-Protocol-Version` header), which 2026-07-28 says a client MAY do as its
+compatibility fallback. Two wording adjustments are suggested: (1) cite the
+revision ("the 2025-11-25 Streamable HTTP transport and authorization
+specification"); (2) the authorization specification does not literally
+instruct clients to send `initialize` *before* metadata discovery — it says a
+client that receives a 401 uses `WWW-Authenticate` (or the default RFC 9728
+location) to find the PRM, and clients MAY start with the PRM directly; the
+accurate phrasing is "the first request a client sends to a Streamable HTTP
+endpoint, and the request on which the specification says an authorization
+challenge is delivered". Everything else in the paragraph matches the spec:
+`initialize` carries no credentials by construction, `Mcp-Session-Id` MAY be
+issued on the `InitializeResult` response, clients SHOULD close it with
+`DELETE`, and the server MAY answer that `405`.
+
+## Disclosure tooling — 0.5.0
+
+```sh
+npm run disclosure -- --in out/handshake.jsonl --results out/tranco-1-1k-local.jsonl out/tranco-1k-10k-local.jsonl out/tranco-10k-100k-local.jsonl --out release/disclosure/
+npm run disclosure -- --in out/handshake.jsonl --results out/*.jsonl --out release/disclosure/ --fetch-security-txt   # also GET security.txt of hosts with findings for the Contact: line
+```
+
+Reads the handshake file and the crawl results (files named `*handshake.jsonl`
+or `*webmcp*` in the `--results` list are ignored, so a shell glob is fine) and
+writes, into `--out`:
+
+- **`findings.csv`**, one row per (host, finding), ranked, columns `host, rank,
+  finding, evidence, severity, contact_hint, notified_on, remediated_on, notes`.
+  Findings: `no_challenge_200` (handshake; **medium**), `dead_card_endpoint`
+  (hygiene `endpoint_unreachable`; low), `card_without_endpoint`
+  (`no_endpoint_url_in_card`; info), `prm_issuer_mismatch` (`issuer_mismatch`
+  on a resolved AS, **excluding** issuers under `shopify.com/authentication`;
+  low), `no_pkce_advertised` (low), `prm_resource_mismatch` (low). `evidence` is
+  the URL plus the status we saw. `contact_hint` is the security.txt `Contact:`
+  line when the crawl archived the body (`--store-bodies`) or
+  `--fetch-security-txt` re-fetched it; otherwise `security.txt: <url>` when
+  the crawl validated one (bodies are not stored by default), otherwise
+  `WHOIS/abuse`. `notified_on` / `remediated_on` are left blank for you to fill;
+  the 90-day clock runs from `notified_on`.
+  **Shopify storefronts** (fingerprint `shopify`, or any declared issuer under
+  `shopify.com/authentication`) never get their own rows: all their findings,
+  including the two-issuer `issuer_mismatch` pattern, are rolled into one row
+  `shopify-platform-pattern` whose evidence carries the host count and
+  per-finding counts — the fix is Shopify's, not the merchants'.
+- **`email-template.md`**: a short, plain coordinated-disclosure email with
+  `{{placeholders}}` (`{{host}}`, `{{findings_list}}`, `{{observed_on}}`,
+  `{{user_agent}}`, `{{spec_pointer}}`, `{{publish_not_before}}`,
+  `{{optout_email}}`, `{{contact_email}}`, `{{project_url}}`, ...): what we saw,
+  how we saw it (one `initialize`, no credentials, DELETE, nothing else), what
+  the spec says, the 90-day window, dataset opt-out, contact.
+- **`summary.md`**: counts per finding type, hosts with findings, the Shopify
+  roll-up, and the column legend.
+
+The tool makes no network requests unless `--fetch-security-txt` is given
+(then one GET per host with findings, through the limiter at 1 rps).
 
 
 ## WebMCP module (paper §4.2, "WebMCP" paragraph) — 0.4.0
@@ -492,7 +678,7 @@ and accumulates them). The banner says `(shard i/n of the file)`.
       ],
       "bearer_query_allowed": false,
       "hsts": "max-age=63072000", "cache_control": "public, max-age=300",
-      "mcp_unauthenticated_initialize": null, // TODO, always null in this pass
+      "mcp_unauthenticated_initialize": null, // always null inline; the handshake probe writes its own file (npm run handshake)
       "notes": []                             // no_hsts_on_card | endpoint_not_https | endpoint_unreachable | no_endpoint_url_in_card | third_party_hosted:endpoint | no_prm_for_endpoint | prm_resource_mismatch | no_authorization_server_declared | empty_authorization_servers | auth_server_not_https | auth_server_metadata_unresolved | issuer_mismatch | no_pkce_advertised | third_party_hosted:auth_server | bearer_query_allowed
     }
   ]
@@ -528,6 +714,9 @@ src/probe.ts           2 nx baselines, randomized probing, SimHash soft-404 + ch
 src/validate.ts        per-artifact validators (Ajv schemas for JSON cards; Markdown/OpenAPI/text rules)
 src/fingerprint.ts     platform fingerprint from the homepage; cdn and hints recorded separately
 src/hygiene.ts         endpoint / path-suffixed PRM / authorization-server / PKCE / bearer-query / HSTS checks (§4.6 a–d)
+src/handshake.ts       MCP initialize handshake probe (§4.6e): target collection from results, one POST initialize, WWW-Authenticate parsing, SSE first event, classification, DELETE, resource_metadata check
+src/handshake-run.ts   handshake CLI (npm run handshake): ethics gate, --dry-run, resume, per-endpoint log
+src/disclosure.ts      disclosure builder (npm run disclosure): findings.csv / email-template.md / summary.md, Shopify roll-up
 src/run.ts             CLI, contact preflight, blocked / redirect-only rules, --shard, idempotent JSONL writer with backpressure
 src/summarize.ts       streaming prevalence + platform + hygiene tables (one or several files)
 src/webmcp.ts          WebMCP headless module: init-script shim, robots.txt, link picker, origin-trial decoding, Chromium launch
@@ -535,10 +724,10 @@ src/webmcp-run.ts      WebMCP CLI (npm run webmcp): concurrency, pages, resume, 
 src/corpus/tranco.ts   Tranco corpus builder: zip download / --file, list id, PSL dedupe, rank bands, meta sidecar
 src/corpus/subsample.ts 5K WebMCP subsample from results files (seeded, 2x artifact oversample, shortfall report)
 src/rank-backfill.ts   adds rank to results crawled before 0.3.2
-src/selftest.ts        self-test, 74 checks incl. a loopback HTTP server and headless Chromium on the fixtures (npm test)
-src/fixture-server.ts  local virtual-host fixtures for end-to-end runs (compressed responses, WebMCP vhosts)
+src/selftest.ts        self-test, 88 checks incl. a loopback HTTP server, the handshake fixtures and headless Chromium (npm test)
+src/fixture-server.ts  local virtual-host fixtures for end-to-end runs (compressed responses, mcp-*.fixture handshake vhosts with a request log, WebMCP vhosts)
 hosts/smoke.txt        ~110-host smoke corpus (NOT the paper corpus; see hosts/README.md)
-hosts/fixtures.txt     the seven HTTP-crawl fixture vhosts
+hosts/fixtures.txt     the seven HTTP-crawl fixture vhosts + the four handshake vhosts
 hosts/webmcp-fixtures.txt  the two WebMCP fixture vhosts
 hosts/webmcp-sample.txt    output of corpus:webmcp-sample (not committed)
 hosts/tranco-*         output of corpus:tranco (not committed; see below)
@@ -568,7 +757,10 @@ never reappears in `1k-10k`), and writes:
   `crawl:tranco1k` reads;
 - `hosts/tranco-<listid-or-date>.meta.json`: list id, source, download time,
   CSV row count, and per band `from`/`to`, input rows, hosts written, dedupe
-  losses and unparseable rows (IP literals, bare TLDs).
+  losses and unparseable rows (IP literals, bare TLDs). Since 0.5.0 a run
+  **merges** into an existing sidecar for the same list id (same-label bands
+  replaced, other bands kept, top-level provenance from the latest run), so
+  `--bands 1k-10k` after `--bands 1-1k` leaves both entries in place.
 
 Bands are `LO-HI` with `k`/`m` suffixes; `1-1k` is ranks 1..1000 and `1k-10k`
 is 1001..10000, so the defaults tile 1..100000 without overlap. The zip is
@@ -577,17 +769,79 @@ members) so no new dependency was needed. `tranco-list.eu` is denied by the
 sandbox egress proxy, so run `corpus:tranco` from the laptop; the self-test
 covers the loader with an inline CSV and an in-memory zip.
 
+## MCP-registry corpus (paper §4.1, corpus C) — 0.6.0
+
+```
+npm run corpus:registry                                   # official registry (no key); -> hosts/registry-latest.txt
+GLAMA_API_KEY=... SMITHERY_API_KEY=... npm run corpus:registry -- --tranco hosts/tranco-latest-1-1k.txt,hosts/tranco-latest-1k-10k.txt,hosts/tranco-latest-10k-100k.txt
+npm run corpus:registry -- --save-pages hosts/registry-official-pages.json   # keep the raw pages (provenance / offline replay with --from-json)
+npm run crawl:registry                                    # the usual 14-path crawl over those hosts -> out/registry-local.jsonl
+```
+
+Pages the official registry (`/v0.1/servers?version=latest`, cursor
+pagination), Glama (`/api/mcp/v1/servers`, needs a key) and Smithery
+(`/servers`, needs a key; remote servers are fetched one by one for their
+`connections[].deploymentUrl`), keeps every remote (streamable-http / SSE)
+endpoint URL and reduces it to a **hostname**. Templates
+(`https://{tenant}.example.com/mcp`), loopback, IPs and forge/registry hosts
+(github.com, glama.ai, server.smithery.ai, ...) are dropped, which is why
+Smithery contributes almost nothing: its hosted servers all live on one
+hostname. One host appears once in the hosts file; the sidecar
+`hosts/registry-<date>.endpoints.jsonl` keeps every (host, registry, server,
+url, transport) row. With `--tranco` the hosts file carries the Tranco rank of
+the host, else of its registrable domain with private suffixes honoured
+(`mcp.example.com` gets `example.com`'s rank; `x.workers.dev`, `y.vercel.app`
+and wildcard-DNS names like `1-2-3-4.sslip.io` get none) and the meta reports how many registry hosts are in the
+top 100K at all. A registry that is unreachable or rejects its key is reported
+and skipped. The self-test covers the extractors, the cursor walk and the
+writer against recorded page shapes; the live calls run from the laptop.
+
+## Commerce / fintech corpus via Cloudflare content categories (paper §4.1, corpus B) — 0.6.0
+
+```
+export CLOUDFLARE_API_TOKEN=...      # token with Account > Intel: Read
+export CLOUDFLARE_ACCOUNT_ID=...     # the 32-hex id in your dashboard URL
+npm run corpus:radar                 # labels all three Tranco bands; ~25 min at 3 req/s x 20 domains; resumable
+npm run corpus:radar -- --from-cache # no network: rebuild the selection from hosts/radar-labels.jsonl
+npm run crawl:commerce && npm run crawl:fintech   # -> out/commerce-local.jsonl, out/fintech-local.jsonl
+```
+
+Labels come from Cloudflare's Domain Intelligence API, `GET
+/accounts/{account_id}/intel/domain/bulk?domain=a&domain=b...`, whose items
+carry `content_categories[] {id, name, super_category_id}` and
+`popularity_rank`. (The Radar ranking endpoint, `/radar/ranking/domain/{d}`,
+was the first attempt and returns categories only for the ordered top 100, so
+it cannot label a corpus; cache rows from that attempt carry no `source` field
+and are ignored.) The loader asks in batches of 20 at a paced 3 requests/s
+(Cloudflare's API limit is 1,200 per 5 minutes; 429s are honoured with
+`Retry-After`), appends every answer, misses included, to
+`hosts/radar-labels.jsonl`, and skips hosts already there, so an interrupted
+run resumes and a second run costs nothing. Selection is a pure function of
+the cache: a host is *commerce* when any category name matches `COMMERCE_RE`
+(shopping, auctions, e-commerce, marketplace, retail, classifieds, coupons) and
+*fintech* when any matches `FINTECH_RE` (financ*, bank*, insurance, invest*,
+trading, brokerage, crypto, payment, lending, loans, accounting, tax); both
+regexes are overridable on the command line and recorded in
+`hosts/radar-<date>.meta.json` together with the category histogram, the
+labelled / not-found / error counts and the window in which the labels were
+fetched. The two corpora may overlap (the meta says by how much); the paper
+treats these labels as a convenience classification, not ground truth, and the
+fingerprint precision sample is the place to check them. The self-test runs
+`labelHosts` against a loopback stand-in (`CRAWLER_INTEL_URL`) for the
+cache-skip, legacy-row, batching, 429 retry, miss caching and token-rejection
+paths, and the selection and writer on recorded answers.
+
 ## TODO
 
 - **WebMCP module follow-ups** (§4.2): a `webmcp:summarize` table; a
   Chrome build with the trial flag on, to measure registrations that are
   gated on the real API rather than on feature detection; signature check of
   origin-trial tokens against Chrome's public key.
-- **MCP initialize probe** (§4.6e): JSON-RPC `initialize` over Streamable HTTP
-  (POST, `Accept: application/json, text/event-stream`) with no credentials;
-  record accepted / 401 with `WWW-Authenticate resource_metadata` / other; stop
-  at the handshake; populate `mcp_unauthenticated_initialize`. Gate behind a
-  flag and the 45-day disclosure process.
+- **MCP initialize probe follow-ups** (§4.6e, landed in 0.5.0 as `handshake`):
+  join `handshake.jsonl` back into the crawl rows
+  (`mcp_unauthenticated_initialize` is still `null` inline); a 2026-07-28-style
+  probe (a self-describing `tools/list`? — needs its own ethics review, it is
+  not a handshake) for servers classified `modern_no_initialize`.
 - **Corpus builders** (§4.1), remaining parts: Cloudflare Radar category join
   (Shopping, Finance); MCP registry / Smithery / Glama scrapers producing
   registrable domains; employer-domain exclusion. (Tranco download, rank
@@ -600,8 +854,9 @@ covers the loader with an inline CSV and an in-memory zip.
   by review; validate against a hand-labelled sample).
 - Formal JSON Schema for the SEP-2127 card once it is final; AI Card
   (`ai-catalog.json`) currently gets an object check only.
-- MCP `initialize` probe also needs the SEP-2127 `remotes[].type` to pick the
-  transport (streamable-http vs sse).
+- The handshake probe POSTs to every `remotes[].url` regardless of
+  `remotes[].type`; an `sse`-typed remote (legacy HTTP+SSE transport) answers
+  the POST with 4xx/405 and is filed under `error_4xx`, not probed via GET.
 - Second vantage (EU) runner and a `diff` command for vantage disagreements and
   §4.7 staleness (appeared / disappeared / changed-hash, llms.txt link rot).
 
@@ -694,3 +949,55 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
 6. `crawler_version` is `0.4.0`; the UA is `AgentDiscoveryCrawler/0.4`. The
    HTTP crawl output is unchanged apart from the version string; results from
    0.3.2 need no re-crawl.
+
+## Changes in 0.6.0
+
+1. **MCP-registry corpus loader** (`src/corpus/registry.ts`, `npm run
+   corpus:registry`) and **Cloudflare Radar commerce / fintech loader**
+   (`src/corpus/radar.ts`, `npm run corpus:radar`), see the two sections
+   above; `crawl:registry`, `crawl:commerce`, `crawl:fintech` scripts.
+2. Version bump: UA `AgentDiscoveryCrawler/0.6`, `crawler_version` `0.6.0`.
+   Nothing in the probe set, classification or output schema changed, so
+   0.5.0 and 0.6.0 results files are directly comparable.
+3. Self-test: 97 checks (was 88).
+
+## Changes in 0.5.0
+
+1. **MCP `initialize` handshake probe** (`src/handshake.ts`,
+   `src/handshake-run.ts`, `npm run handshake`; paper §4.6e). A separate pass
+   over crawl results: for hosts with a valid MCP card, one JSON-RPC
+   `initialize` (protocol 2025-11-25, no credentials) per advertised endpoint,
+   record status / `WWW-Authenticate` / `serverInfo` / `Mcp-Session-Id`, close
+   an issued session with `DELETE`, GET the `resource_metadata` URL from the
+   challenge and compare it with hygiene's PRM, classify (see the table). Gated
+   on the contact env vars **and** `--i-have-read-the-ethics-section`;
+   `--dry-run` lists targets without contacting anyone; prints the §4.6
+   paragraph at start. Verified against modelcontextprotocol.io on 2026-10-06:
+   the latest revision (2026-07-28) has no `initialize`, so the probe speaks
+   2025-11-25 and files 2026-07-28 servers as `modern_no_initialize` (see
+   "What the spec says today").
+2. **Disclosure tooling** (`src/disclosure.ts`, `npm run disclosure`):
+   `findings.csv` (per host x finding, with severity and contact hint; Shopify
+   storefronts rolled into one `shopify-platform-pattern` row), a plain
+   coordinated-disclosure `email-template.md` with placeholders, `summary.md`.
+3. **HTTP layer**: `fetchUrl` accepts `POST` (with body) and `DELETE`, extra
+   headers, and an SSE early-stop; a POST/DELETE follows only 307/308. The
+   fixture routing hook is `resolveFixtureTarget()`. GET/HEAD behaviour is
+   unchanged.
+4. **Fixtures**: `mcp-public.fixture` (JSON result + session id, DELETE
+   handler), `mcp-sse.fixture` (result in an SSE stream that stays open),
+   `mcp-protected.fixture` (401 + `WWW-Authenticate` with `resource_metadata`,
+   plus the PRM and AS metadata), `mcp-html.fixture` (200 HTML); the fixture
+   server logs every request (`FIXTURE_REQUEST_LOG`) and every terminated
+   session, and the self-test asserts exactly one POST per endpoint, all
+   `initialize`, one DELETE per session, no `Authorization` header, nothing
+   else, and that `--dry-run` contacts nothing. `npm run handshake:fixtures`.
+5. **Reporting fixes**: `corpus:tranco` merges bands into an existing
+   `tranco-<id>.meta.json` instead of overwriting it; the `webmcp` progress
+   line counts `webmcp-origin-trial` only for tokens whose feature is WebMCP
+   and reports `other_trials` separately (the per-host line shows
+   `trial=other:<feature>` for those).
+6. `crawler_version` is `0.6.0`; the UA is `AgentDiscoveryCrawler/0.6`. The
+   `crawl` output is unchanged apart from the version string; results from
+   0.4.0 need no re-crawl and are valid input to `handshake`. No new
+   dependency: `npm install` is not needed after 0.4.0. Self-test: 88 checks.

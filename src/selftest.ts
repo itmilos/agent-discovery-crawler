@@ -16,8 +16,14 @@ import { sameRegistrableDomain, isWwwVariant, decodeBody, fetchUrl, userAgent, C
 import { computeBlocked, contactPreflight, isRedirectOnly, normalizeHost, parseHostLine, estimateDurationSec, fmtDuration, progressLine, REQUESTS_PER_HOST, parseShard, applyShard } from './run.js';
 import { parseRobots, robotsAllows, pickLinks, decodeOriginTrialToken, makeFakeOriginTrialToken, resolveChromiumPath, launchChromium, crawlHostWebMCP, WEBMCP_INIT_SCRIPT, WEBMCP_METHODS } from './webmcp.js';
 import { buildSubsample, readPool, weightedDraw, mulberry32, renderSampleFile } from './corpus/subsample.js';
-import { startFixtureServer } from './fixture-server.js';
+import { startFixtureServer, FIXTURE_REQUEST_LOG, FIXTURE_SESSIONS_TERMINATED } from './fixture-server.js';
+import { buildInitializeRequest, classifyHandshake, collectEndpoints, firstSseData, parseHandshakeBody, parseWwwAuthenticate, probeHandshake, MCP_PROTOCOL_VERSION, a2aLooksLikeMcp, extractAllEndpoints, type EndpointTarget } from './handshake.js';
+import { handshakeGate } from './handshake-run.js';
+import { buildFindings, csvEscape, hygieneFindings, isShopifyHost, isShopifyIssuer, renderCsv, renderSummary, securityTxtContact, EMAIL_TEMPLATE } from './disclosure.js';
+import { originTrialKind } from './webmcp-run.js';
 import { parseBand, parseBands, parseTrancoCsv, buildBands, readZip, csvFromZip, renderBandFile, writeCorpus } from './corpus/tranco.js';
+import { endpointHost, extractOfficial, officialNextCursor, pageOfficial, extractGlama, glamaNext, extractSmitheryDetail, dedupeHosts, writeRegistryCorpus, loadTrancoRanks, trancoRankFor } from './corpus/registry.js';
+import { parseIntelItem, parseIntelBody, classify, makePacer, readLabels, labelHosts, writeRadarCorpus, LABEL_SOURCE, type RadarLabel } from './corpus/radar.js';
 import { mkdtempSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -317,13 +323,13 @@ await t('extract endpoint from remotes / transport', () => {
 });
 
 // ---- identity / preflight ----
-await t('user-agent: version 0.4 and env-configurable contact URL / mailbox', () => {
-  assert.ok(CRAWLER_VERSION.startsWith('0.4.'));
+await t('user-agent: version 0.6 and env-configurable contact URL / mailbox', () => {
+  assert.ok(CRAWLER_VERSION.startsWith('0.6.'));
   const saved = { u: process.env.CRAWLER_CONTACT_URL, e: process.env.CRAWLER_CONTACT_EMAIL };
   process.env.CRAWLER_CONTACT_URL = 'https://lab.example/crawler';
   process.env.CRAWLER_CONTACT_EMAIL = 'crawler@lab.example';
   const ua = userAgent();
-  assert.ok(ua.startsWith('AgentDiscoveryCrawler/0.4 '), ua);
+  assert.ok(ua.startsWith('AgentDiscoveryCrawler/0.6 '), ua);
   assert.ok(ua.includes('+https://lab.example/crawler') && ua.includes('mailto:crawler@lab.example'));
   assert.ok(!/example\.org|placeholder/.test(ua));
   if (saved.u === undefined) delete process.env.CRAWLER_CONTACT_URL; else process.env.CRAWLER_CONTACT_URL = saved.u;
@@ -510,6 +516,149 @@ await t('tranco: writes band files, latest copies and meta sidecar', () => {
   const d = writeCorpus(results, 14, { outDir: dir, listId: null, source: 'inline', now, crawlerVersion: CRAWLER_VERSION });
   assert.equal(d.meta.list_tag, '2026-10-04');
   assert.ok(existsSync(join(dir, 'tranco-2026-10-04-1-5.txt')));
+});
+
+// ---- 0.6.0: MCP-registry corpus loader (offline, recorded page shapes) ----
+await t('registry: endpointHost keeps hostnames, drops templates, forges, IPs, loopback, non-http', () => {
+  assert.equal(endpointHost('https://mcp.example.com/mcp'), 'mcp.example.com');
+  assert.equal(endpointHost('HTTPS://API.Example.COM:443/v1/sse?x=1'), 'api.example.com');
+  assert.equal(endpointHost('https://{tenant}.example.com/mcp'), null);
+  assert.equal(endpointHost('https://github.com/foo/bar'), null);
+  assert.equal(endpointHost('https://server.smithery.ai/foo/mcp'), null);
+  assert.equal(endpointHost('https://127.0.0.1:8080/mcp'), null);
+  assert.equal(endpointHost('http://localhost:3000/mcp'), null);
+  assert.equal(endpointHost('npx -y foo'), null);
+  assert.equal(endpointHost('stdio'), null);
+});
+const officialPage1 = {
+  servers: [
+    { server: { name: 'io.github.acme/weather', remotes: [{ type: 'streamable-http', url: 'https://mcp.acme.example/mcp' }, { type: 'sse', url: 'https://mcp.acme.example/sse' }] } },
+    { server: { name: 'io.github.bob/local', packages: [{ registryType: 'npm', identifier: 'bob-mcp' }] } },
+    { server: { name: 'com.github/notes', remotes: [{ type: 'streamable-http', url: 'https://api.github.com/mcp' }] } },
+    { server: { name: 'io.github.t/tenant', remotes: [{ type: 'streamable-http', url: 'https://{sub}.tenant.example/mcp' }] } },
+  ],
+  metadata: { nextCursor: 'abc', count: 4 },
+};
+const officialPage2 = { servers: [{ server: { name: 'io.github.c/docs', remotes: [{ type: 'streamable-http', url: 'https://docs.c.example/mcp' }] } }], metadata: { nextCursor: null, count: 1 } };
+await t('registry: official pages -> endpoint rows, cursor, dedupe at hostname', () => {
+  const rows = extractOfficial(officialPage1);
+  assert.deepEqual(rows.map((r) => [r.host, r.transport]), [['mcp.acme.example', 'streamable-http'], ['mcp.acme.example', 'sse']]);
+  assert.equal(officialNextCursor(officialPage1), 'abc');
+  assert.equal(officialNextCursor(officialPage2), null);
+  assert.deepEqual(dedupeHosts([...rows, ...extractOfficial(officialPage2)]), ['docs.c.example', 'mcp.acme.example']);
+});
+await t('registry: pageOfficial follows nextCursor with a fake fetcher', async () => {
+  const seen: string[] = [];
+  const fetch = async (url: string) => { seen.push(url); return url.includes('cursor=abc') ? officialPage2 : officialPage1; };
+  const r = await pageOfficial(fetch, () => {});
+  assert.equal(seen.length, 2);
+  assert.ok(seen[1].includes('cursor=abc'));
+  assert.equal(r.servers, 5);
+  assert.equal(r.rows.length, 3);
+});
+await t('registry: glama walker picks url/endpoint-ish keys, skips repository/homepage; smithery detail -> connections', () => {
+  const g = { servers: [{ slug: 'x', url: 'https://glama.ai/mcp/servers/x', repository: { url: 'https://github.com/x/y' }, homepageUrl: 'https://x.example', remotes: [{ transport: 'sse', sseUrl: 'https://mcp.x.example/sse' }] }], pageInfo: { endCursor: 'c1', hasNextPage: true } };
+  const rows = extractGlama(g);
+  assert.deepEqual(rows.map((r) => [r.host, r.transport]), [['mcp.x.example', 'sse']]);
+  assert.equal(glamaNext(g), 'c1');
+  assert.equal(glamaNext({ pageInfo: { endCursor: 'c2', hasNextPage: false } }), null);
+  const s = extractSmitheryDetail('@acme/foo', { connections: [{ type: 'http', deploymentUrl: 'https://server.smithery.ai/@acme/foo/mcp' }, { type: 'http', deploymentUrl: 'https://foo.acme.example/mcp' }] });
+  assert.deepEqual(s.map((r) => r.host), ['foo.acme.example']);
+});
+await t('registry: writeRegistryCorpus writes hosts (+ Tranco rank by host or parent), endpoints sidecar and meta', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'reg-'));
+  const tranco = join(dir, 'tranco.txt');
+  writeFileSync(tranco, '# x\n1,acme.example\n2,other.example\n');
+  const rows = [...extractOfficial(officialPage1), ...extractOfficial(officialPage2)];
+  const { meta } = writeRegistryCorpus(rows, { official: { servers: 5, endpoints: 3, hosts: 0 } }, { outDir: dir, trancoFiles: [tranco], now: new Date('2026-10-06T00:00:00Z') });
+  assert.equal(meta.hosts, 2);
+  assert.equal(meta.hosts_in_tranco, 1);
+  assert.equal(meta.sources.official?.hosts, 2);
+  const txt = readFileSync(join(dir, 'registry-latest.txt'), 'utf8');
+  assert.ok(txt.includes('\n1,mcp.acme.example\n'));
+  assert.ok(txt.includes('\ndocs.c.example\n'));
+  assert.equal(readFileSync(join(dir, 'registry-2026-10-06.endpoints.jsonl'), 'utf8').trim().split('\n').length, 3);
+  assert.equal(trancoRankFor('deep.sub.other.example', loadTrancoRanks([tranco])), 2);
+  assert.equal(trancoRankFor('nothing.example', loadTrancoRanks([tranco])), null);
+  const plat = new Map([['workers.dev', 82], ['sslip.io', 2339], ['vercel.app', 500], ['github.io', 300], ['example.com', 7]]);
+  assert.equal(trancoRankFor('foo.michael.workers.dev', plat), null, 'private-suffix platform subdomains do not inherit the platform rank');
+  assert.equal(trancoRankFor('1-2-3-4.sslip.io', plat), null);
+  assert.equal(trancoRankFor('x.vercel.app', plat), null);
+  assert.equal(trancoRankFor('mcp.api.example.com', plat), 7);
+  assert.equal(trancoRankFor('workers.dev', plat), 82, 'the platform apex itself still matches');
+});
+
+// ---- 0.6.0: Cloudflare Radar commerce / fintech corpus (offline) ----
+const intelShop = { domain: 'shop.example', popularity_rank: 1234, content_categories: [{ id: 32, name: 'Shopping & Auctions', super_category_id: 26 }, { id: 7, name: 'Business & Economy', super_category_id: 2 }], application: { id: 1, name: 'x' } };
+await t('radar/intel: parse bulk and single bodies; missing domains are not_found; failures are errors', () => {
+  const l = parseIntelItem('shop.example', 50, intelShop, new Date('2026-10-06T00:00:00Z'));
+  assert.equal(l.status, 'ok'); assert.equal(l.radar_rank, 1234); assert.equal(l.source, LABEL_SOURCE);
+  assert.deepEqual(l.categories, [{ id: 32, name: 'Shopping & Auctions', superCategoryId: 26 }, { id: 7, name: 'Business & Economy', superCategoryId: 2 }]);
+  const hosts = [{ host: 'shop.example', rank: 2 }, { host: 'gone.example', rank: 3 }];
+  const bulk = parseIntelBody(hosts, { success: true, errors: [], result: [{ domain: 'Shop.Example.', popularity_rank: 9, content_categories: [] }] });
+  assert.deepEqual(bulk.map((x) => [x.host, x.status]), [['shop.example', 'ok'], ['gone.example', 'not_found']]);
+  const single = parseIntelBody([hosts[0]], { success: true, result: intelShop });
+  assert.equal(single[0].categories.length, 2);
+  assert.equal(parseIntelBody(hosts, { success: false, errors: [{ message: 'internal' }] })[1].status, 'error');
+  assert.equal(parseIntelBody(hosts, 'garbage')[0].status, 'error');
+});
+await t('radar: classify by category name regexes', () => {
+  const mk = (names: string[]): RadarLabel => ({ host: 'h', rank: null, fetched_at: '', status: 'ok', radar_rank: null, bucket: null, source: LABEL_SOURCE, categories: names.map((name) => ({ id: null, name, superCategoryId: null })) });
+  assert.deepEqual(classify(mk(['Shopping & Auctions'])), { commerce: true, fintech: false });
+  assert.deepEqual(classify(mk(['Economy & Finance', 'Banking'])), { commerce: false, fintech: true });
+  assert.deepEqual(classify(mk(['Cryptocurrency', 'Shopping'])), { commerce: true, fintech: true });
+  assert.deepEqual(classify(mk(['Technology', 'News'])), { commerce: false, fintech: false });
+  assert.deepEqual(classify(mk(['Retail'])), { commerce: true, fintech: false });
+});
+await t('radar: pacer spaces starts at ~rps', async () => {
+  const pace = makePacer(50); // 20 ms apart
+  const t0 = Date.now();
+  for (let i = 0; i < 5; i++) await pace();
+  const el = Date.now() - t0;
+  assert.ok(el >= 70 && el < 400, `elapsed ${el}ms`);
+});
+await t('radar/intel: labelHosts against a loopback stand-in: skips cached hosts, ignores legacy rows, batches, retries 429, caches misses, stops on 403; then selection', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'radar-'));
+  const cache = join(dir, 'labels.jsonl');
+  writeFileSync(cache,
+    JSON.stringify({ host: 'done.example', rank: 1, fetched_at: '2026-10-01T00:00:00Z', status: 'ok', radar_rank: 1, bucket: null, source: LABEL_SOURCE, categories: [{ id: 1, name: 'Banking', superCategoryId: null }] }) + '\n' +
+    JSON.stringify({ host: 'legacy.example', rank: 4, fetched_at: '2026-10-01T00:00:00Z', status: 'ok', radar_rank: null, bucket: '1000', categories: [] }) + '\n');
+  const have = await readLabels(cache);
+  assert.equal(have.size, 1, 'legacy Radar-ranking rows without source are ignored');
+  const hosts = [{ host: 'done.example', rank: 1 }, { host: 'shop.example', rank: 2 }, { host: 'gone.example', rank: 3 }, { host: 'legacy.example', rank: 4 }];
+  const calls: string[][] = [];
+  let first429 = true;
+  const intel = createServer((req, res) => {
+    const u = new URL(req.url ?? '/', 'http://x');
+    const asked = u.searchParams.getAll('domain');
+    calls.push(asked);
+    if (req.headers.authorization !== 'Bearer tok') { res.writeHead(403, { 'content-type': 'application/json' }); res.end('{"success":false,"errors":[{"message":"auth"}]}'); return; }
+    if (first429) { first429 = false; res.writeHead(429, { 'retry-after': '0' }); res.end(''); return; }
+    res.writeHead(200, { 'content-type': 'application/json' });
+    res.end(JSON.stringify({ success: true, errors: [], result: asked.filter((d) => d !== 'gone.example').map((d) => (d === 'shop.example' ? intelShop : { domain: d, content_categories: [{ id: 2, name: 'Technology', super_category_id: 1 }] })) }));
+  });
+  await new Promise<void>((r) => intel.listen(0, '127.0.0.1', r));
+  const port = (intel.address() as { port: number }).port;
+  process.env.CRAWLER_INTEL_URL = `http://127.0.0.1:${port}/bulk`;
+  try {
+    const r = await labelHosts(hosts, { token: 'tok', accountId: 'acc', cachePath: cache, have, rps: 100, concurrency: 2, batch: 2, timeoutMs: 5_000, log: () => {} });
+    assert.deepEqual(r, { asked: 3, ok: 2, not_found: 1, errors: 0, requests: 3 }, JSON.stringify(r));
+    assert.ok(!calls.flat().includes('done.example'), 'cached host must not be fetched');
+    assert.deepEqual(calls[0], ['shop.example', 'gone.example'], 'batched two per call');
+    assert.equal((await readLabels(cache)).size, 4, 'misses are cached too');
+    await assert.rejects(labelHosts([{ host: 'new.example', rank: 9 }], { token: 'bad', accountId: 'acc', cachePath: cache, have, rps: 100, concurrency: 1, batch: 2, timeoutMs: 5_000, log: () => {} }), /token or account rejected/);
+  } finally {
+    delete process.env.CRAWLER_INTEL_URL;
+    intel.close();
+  }
+  const { meta } = writeRadarCorpus(hosts, have, { outDir: dir, trancoFiles: ['t.txt'], labelsPath: cache, now: new Date('2026-10-06T00:00:00Z') });
+  assert.deepEqual(meta.labelled, { ok: 3, not_found: 1, error: 0, unlabelled: 0 });
+  assert.equal(meta.commerce, 1); assert.equal(meta.fintech, 1); assert.equal(meta.overlap, 0);
+  assert.equal(meta.labels_window.first, '2026-10-01T00:00:00Z');
+  assert.ok(readFileSync(join(dir, 'commerce-latest.txt'), 'utf8').includes('\n2,shop.example\n'));
+  assert.ok(readFileSync(join(dir, 'fintech-latest.txt'), 'utf8').includes('\n1,done.example\n'));
+  assert.ok(existsSync(join(dir, 'radar-2026-10-06.meta.json')));
+  assert.deepEqual(meta.categories_top[0], { name: 'Banking', hosts: 1 });
 });
 
 // ---- HTTP layer: content decoding, 303, timeout, shared limiter (loopback server) ----
@@ -781,6 +930,268 @@ await t('subsample: all reachable from band 1, seeded 2x-artifact draw from the 
   assert.equal(short.meta.shortfall, 4998);
   assert.equal(weightedDraw([1, 2, 3], () => 1, 5, mulberry32(1)).length, 3);
 });
+
+// ---- 0.5.0: reporting nits ----
+await t('tranco: a second run MERGES bands into the existing meta sidecar instead of overwriting it', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'tranco-merge-'));
+  const rows = parseTrancoCsv(trancoCsv);
+  const now = new Date('2026-10-05T12:00:00Z');
+  writeCorpus(buildBands(rows, parseBands('1-5')), 14, { outDir: dir, listId: 'K25GW', source: 'inline', now, crawlerVersion: CRAWLER_VERSION });
+  const second = writeCorpus(buildBands(rows, parseBands('5-10')), 14, { outDir: dir, listId: 'K25GW', source: 'inline', now: new Date('2026-10-06T12:00:00Z'), crawlerVersion: CRAWLER_VERSION });
+  const m = JSON.parse(readFileSync(second.metaPath, 'utf8'));
+  assert.deepEqual(Object.keys(m.bands).sort(), ['1-5', '5-10']);
+  assert.equal(m.bands['1-5'].hosts, 3);
+  assert.equal(m.downloaded_at, '2026-10-06T12:00:00.000Z');
+  assert.deepEqual(Object.keys(second.meta.bands).sort(), ['1-5', '5-10']);
+  // same band again replaces its entry (no duplication, counts from the new run)
+  const third = writeCorpus(buildBands(rows, parseBands('1-5')), 14, { outDir: dir, listId: 'K25GW', source: 'inline', now, crawlerVersion: CRAWLER_VERSION });
+  assert.deepEqual(Object.keys(third.meta.bands).sort(), ['1-5', '5-10']);
+});
+await t('webmcp progress: only tokens whose feature is WebMCP count as origin-trial; other trials are counted separately', () => {
+  assert.equal(originTrialKind([]), null);
+  assert.equal(originTrialKind([{ feature: 'WebMCP' }]), 'webmcp');
+  assert.equal(originTrialKind([{ feature: 'ModelContextAPI' }, { feature: 'Foo' }]), 'webmcp');
+  assert.equal(originTrialKind([{ feature: 'PrivacySandboxAdsAPIs' }, { feature: null }]), 'other');
+});
+
+// ---- 0.5.0: MCP initialize handshake probe ----
+await t('handshake: initialize request shape (2025-11-25), WWW-Authenticate parsing, SSE first event, body parsing', () => {
+  const req = buildInitializeRequest(1) as { jsonrpc: string; id: number; method: string; params: { protocolVersion: string; capabilities: object; clientInfo: { name: string; version: string } } };
+  assert.equal(req.jsonrpc, '2.0');
+  assert.equal(req.method, 'initialize');
+  assert.equal(req.params.protocolVersion, MCP_PROTOCOL_VERSION);
+  assert.equal(MCP_PROTOCOL_VERSION, '2025-11-25');
+  assert.deepEqual(req.params.capabilities, {});
+  assert.deepEqual(req.params.clientInfo, { name: 'AgentDiscoveryCrawler', version: CRAWLER_VERSION });
+  const w = parseWwwAuthenticate('Bearer realm="mcp", resource_metadata="https://h.test/.well-known/oauth-protected-resource/mcp", error="invalid_token", error_description="expired"')!;
+  assert.deepEqual([w.scheme, w.realm, w.resource_metadata, w.error, w.error_description], ['Bearer', 'mcp', 'https://h.test/.well-known/oauth-protected-resource/mcp', 'invalid_token', 'expired']);
+  const multi = parseWwwAuthenticate('Basic realm="x", Bearer resource_metadata=https://h.test/prm')!;
+  assert.equal(multi.scheme, 'Bearer');
+  assert.equal(multi.resource_metadata, 'https://h.test/prm');
+  assert.equal(parseWwwAuthenticate('Bearer')!.resource_metadata, null);
+  assert.equal(parseWwwAuthenticate(''), null);
+  assert.equal(firstSseData(': keepalive\n\nid: 1\ndata: \n\nid: 2\nevent: message\ndata: {"a":1}\ndata: {"b":2}\n\n'), '{"a":1}\n{"b":2}');
+  assert.equal(firstSseData(': nothing\n\n'), null);
+  const ok = parseHandshakeBody('application/json', JSON.stringify({ jsonrpc: '2.0', id: 1, result: { protocolVersion: '2025-06-18', capabilities: { tools: {}, prompts: {} }, serverInfo: { name: 'srv', version: '1.2' } } }));
+  assert.equal(ok.kind, 'json');
+  assert.equal(ok.jsonrpc, true);
+  assert.deepEqual(ok.result, { protocol_version: '2025-06-18', server_info: { name: 'srv', version: '1.2' }, capabilities_keys: ['tools', 'prompts'], instructions_present: false });
+  const sse = parseHandshakeBody('text/event-stream', 'data: {"jsonrpc":"2.0","id":1,"result":{"serverInfo":{"name":"s"}}}\n\n');
+  assert.equal(sse.kind, 'sse');
+  assert.equal(sse.result?.server_info?.name, 's');
+  const err = parseHandshakeBody('application/json', '{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Method not found"}}');
+  assert.equal(err.error?.code, -32601);
+  assert.equal(parseHandshakeBody('text/html', '<!doctype html><html></html>').kind, 'html');
+  assert.equal(parseHandshakeBody(null, '').kind, 'empty');
+});
+await t('handshake: classification table', () => {
+  const none = parseHandshakeBody(null, '');
+  const res = parseHandshakeBody('application/json', '{"jsonrpc":"2.0","id":1,"result":{}}');
+  const err = parseHandshakeBody('application/json', '{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"nf"}}');
+  const www = parseWwwAuthenticate('Bearer resource_metadata="https://h/prm"');
+  assert.equal(classifyHandshake(0, null, none), 'unreachable');
+  assert.equal(classifyHandshake(401, www, none), 'challenge_401');
+  assert.equal(classifyHandshake(401, null, none), 'challenge_401_no_header');
+  assert.equal(classifyHandshake(403, null, none), 'forbidden_403');
+  assert.equal(classifyHandshake(200, null, res), 'no_challenge_200');
+  assert.equal(classifyHandshake(200, null, err), 'jsonrpc_error_200');
+  assert.equal(classifyHandshake(200, null, parseHandshakeBody('text/html', '<html>')), 'not_mcp');
+  assert.equal(classifyHandshake(202, null, none), 'not_mcp');
+  assert.equal(classifyHandshake(404, null, err), 'modern_no_initialize'); // 2026-07-28 server: -32601 for an unknown method
+  assert.equal(classifyHandshake(400, null, err), 'modern_no_initialize');
+  assert.equal(classifyHandshake(404, null, none), 'error_4xx');
+  assert.equal(classifyHandshake(429, null, none), 'error_4xx');
+  assert.equal(classifyHandshake(302, null, none), 'redirect_3xx');
+  assert.equal(classifyHandshake(503, null, none), 'error_5xx');
+});
+await t('handshake: disclosure gate needs contact env AND the ethics flag; dry-run needs neither; fixtures waive contact only', () => {
+  assert.match(handshakeGate(['example.com'], { ethics: true, dryRun: false }, {}) ?? '', /CRAWLER_CONTACT_URL/);
+  assert.match(handshakeGate(['example.com'], { ethics: false, dryRun: false }, { url: 'https://x', email: 'a@b' }) ?? '', /--i-have-read-the-ethics-section/);
+  assert.equal(handshakeGate(['example.com'], { ethics: true, dryRun: false }, { url: 'https://x', email: 'a@b' }), null);
+  assert.equal(handshakeGate(['example.com'], { ethics: false, dryRun: true }, {}), null);
+  assert.match(handshakeGate(['mcp-public.fixture'], { ethics: false, dryRun: false }, {}) ?? '', /ethics/);
+  assert.equal(handshakeGate(['mcp-public.fixture'], { ethics: true, dryRun: false }, {}), null);
+});
+await t('handshake: endpoint extraction takes every SEP-2127 remote; A2A endpoints only when they look like MCP', () => {
+  assert.deepEqual(extractAllEndpoints({ name: 'x', remotes: [{ type: 'streamable-http', url: 'https://a/mcp' }, { type: 'sse', url: 'https://a/sse' }] }), ['https://a/mcp', 'https://a/sse']);
+  assert.deepEqual(extractAllEndpoints({ name: 'x', url: 'https://a/m' }), ['https://a/m']);
+  assert.equal(a2aLooksLikeMcp('https://a/a2a', new Set(['https://a/mcp'])), null);
+  assert.equal(a2aLooksLikeMcp('https://a/mcp', new Set(['https://a/mcp'])), 'same_url_as_mcp_card_endpoint');
+  assert.equal(a2aLooksLikeMcp('https://a/v1/MCP/', new Set()), 'path_ends_in_mcp');
+});
+
+// end to end on the fixture vhosts: synthetic results rows -> collect -> probe
+{
+  const fx = await startFixtureServer(0);
+  const savedFixturePort = process.env.CRAWLER_FIXTURE_PORT;
+  process.env.CRAWLER_FIXTURE_PORT = String(fx.port);
+  setGlobalRps(0);
+  const dir = mkdtempSync(join(tmpdir(), 'hs-'));
+  const hyg = (url: string, prm: string[] = []) => ({ source: 'mcp_server_card', kind: 'mcp', card_spec: 'sep-2127', endpoint: { url, https: false, status: 405, reachable: true }, endpoint_third_party_hosted: false, prm_lookups: prm.map((u) => ({ url: u, location: 'path_suffixed', status: 200, valid: true })), authorization_servers: [], has_authorization_servers: false, bearer_query_allowed: null, hsts: null, cache_control: null, mcp_unauthenticated_initialize: null, notes: [] });
+  const row = (host: string, rank: number, card: string | null, hygiene: unknown[]) => JSON.stringify({ host, rank, mcp_card_path: card, hygiene, probes: [], fingerprint: { primary: 'unknown', platforms: [] }, blocked: { blocked: false, reason: null, counts: {} }, redirect_only: false });
+  const a2aOnly = { ...hyg('http://mcp-public.fixture/mcp-public'), source: 'a2a_agent_card', kind: 'a2a' };
+  writeFileSync(join(dir, 'a.jsonl'), [
+    row('mcp-public.fixture', 10, '/.well-known/mcp-server-card', [hyg('http://mcp-public.fixture/mcp-public')]),
+    row('mcp-sse.fixture', 20, '/.well-known/mcp-server-card', []), // no hygiene endpoint: must re-fetch the card
+    row('mcp-protected.fixture', 30, '/.well-known/mcp-server-card', [hyg('http://mcp-protected.fixture/mcp-protected', ['http://mcp-protected.fixture/.well-known/oauth-protected-resource/mcp-protected'])]),
+    '{"host":"trunc',
+  ].join('\n') + '\n');
+  writeFileSync(join(dir, 'b.jsonl'), [
+    row('mcp-html.fixture', 40, '/.well-known/mcp-server-card', [hyg('http://mcp-html.fixture/mcp-html')]),
+    row('dead.fixture', 50, '/.well-known/mcp/server-card.json', [hyg('http://127.0.0.1:1/mcp')]),
+    row('a2a-only.fixture', 60, null, [a2aOnly]), // no valid MCP card: out of scope even though its A2A endpoint is an MCP URL
+    row('mcp-public.fixture', 10, '/.well-known/mcp-server-card', [hyg('http://mcp-public.fixture/mcp-public')]), // duplicate row (two files): one probe only
+  ].join('\n') + '\n');
+  const files = [join(dir, 'a.jsonl'), join(dir, 'b.jsonl')];
+  try {
+    await t('handshake: dry-run lists targets and contacts nothing', async () => {
+      FIXTURE_REQUEST_LOG.length = 0;
+      const { targets, stats } = await collectEndpoints(files, { refetch: false, scheme: 'http' });
+      assert.equal(FIXTURE_REQUEST_LOG.length, 0);
+      assert.equal(stats.hosts_with_mcp_card, 6); // 5 distinct + the duplicate row
+      assert.deepEqual(targets.map((x) => x.host), ['mcp-public.fixture', 'mcp-sse.fixture', 'mcp-protected.fixture', 'mcp-html.fixture', 'dead.fixture']);
+      const sse = targets.find((x) => x.host === 'mcp-sse.fixture')!;
+      assert.equal(sse.endpoint, null);
+      assert.equal(sse.needs_card_refetch, true);
+      assert.equal(stats.a2a_entries, 0); // a2a-only host has no MCP card -> never considered
+    });
+    let results: Awaited<ReturnType<typeof probeHandshake>>[] = [];
+    await t('handshake: card re-fetch derives the missing endpoint with exactly one GET', async () => {
+      FIXTURE_REQUEST_LOG.length = 0;
+      const { targets, stats } = await collectEndpoints(files, { refetch: true, scheme: 'http', timeoutMs: 3000 });
+      assert.equal(stats.refetched, 1);
+      assert.deepEqual(FIXTURE_REQUEST_LOG.map((r) => `${r.method} ${r.host}${r.path}`), ['GET mcp-sse.fixture/.well-known/mcp-server-card']);
+      assert.equal(targets.find((x) => x.host === 'mcp-sse.fixture')!.endpoint, 'http://mcp-sse.fixture/mcp-sse');
+      FIXTURE_REQUEST_LOG.length = 0;
+      FIXTURE_SESSIONS_TERMINATED.length = 0;
+      for (const x of targets) if (x.endpoint) results.push(await probeHandshake(x as EndpointTarget & { endpoint: string }, { timeoutMs: 3000 }));
+    });
+    const by = (h: string) => results.find((r) => r.host === h)!;
+    await t('handshake: public endpoint -> no_challenge_200 with serverInfo / protocolVersion / capability keys, session closed with DELETE', () => {
+      const r = by('mcp-public.fixture');
+      assert.equal(r.classification, 'no_challenge_200');
+      assert.equal(r.status, 200);
+      assert.equal(r.body_kind, 'json');
+      assert.deepEqual(r.result?.server_info, { name: 'fixture-public-mcp', version: '9.9.9' });
+      assert.equal(r.result?.protocol_version, '2025-11-25');
+      assert.deepEqual(r.result?.capabilities_keys, ['tools', 'resources']);
+      assert.equal(r.mcp_session_id_present, true);
+      assert.deepEqual(r.session_delete, { sent: true, status: 204, error: null });
+      assert.equal(r.request.authorization_sent, false);
+      assert.equal(r.www_authenticate, null);
+      assert.deepEqual(r.requests_made, ['POST http://mcp-public.fixture/mcp-public', 'DELETE http://mcp-public.fixture/mcp-public']);
+    });
+    await t('handshake: SSE endpoint -> first event parsed, stream left open by the server does not stall the probe', () => {
+      const r = by('mcp-sse.fixture');
+      assert.equal(r.classification, 'no_challenge_200');
+      assert.equal(r.body_kind, 'sse');
+      assert.equal(r.result?.server_info?.name, 'fixture-sse-mcp');
+      assert.ok(r.elapsed_ms < 2500, `took ${r.elapsed_ms}ms (should stop after the first event, not at the timeout)`);
+      assert.equal(r.session_delete?.sent, true);
+    });
+    await t('handshake: protected endpoint -> challenge_401, WWW-Authenticate parsed, resource_metadata resolves and matches the hygiene PRM', () => {
+      const r = by('mcp-protected.fixture');
+      assert.equal(r.classification, 'challenge_401');
+      assert.equal(r.www_authenticate?.scheme, 'Bearer');
+      assert.equal(r.www_authenticate?.realm, 'mcp');
+      assert.equal(r.www_authenticate?.error, 'invalid_request');
+      assert.equal(r.www_authenticate?.resource_metadata, 'http://mcp-protected.fixture/.well-known/oauth-protected-resource/mcp-protected');
+      assert.equal(r.resource_metadata?.resolves, true);
+      assert.equal(r.resource_metadata?.is_prm, true);
+      assert.equal(r.resource_metadata?.matches_hygiene_prm, true);
+      assert.equal(r.session_delete, null);
+      assert.equal(r.result, null);
+    });
+    await t('handshake: HTML squatter -> not_mcp; refused connection -> unreachable', () => {
+      assert.equal(by('mcp-html.fixture').classification, 'not_mcp');
+      assert.equal(by('mcp-html.fixture').body_kind, 'html');
+      assert.equal(by('dead.fixture').classification, 'unreachable');
+      assert.equal(by('dead.fixture').error, 'refused');
+      assert.equal(by('dead.fixture').requests_made.length, 1);
+    });
+    await t('handshake: request log — exactly one POST per endpoint, every POST is initialize, DELETE exactly once per session, never an Authorization header, nothing else', () => {
+      const log = FIXTURE_REQUEST_LOG;
+      const posts = log.filter((r) => r.method === 'POST');
+      assert.deepEqual(posts.map((r) => `${r.host}${r.path}`).sort(), ['mcp-html.fixture/mcp-html', 'mcp-protected.fixture/mcp-protected', 'mcp-public.fixture/mcp-public', 'mcp-sse.fixture/mcp-sse']);
+      for (const p of posts) {
+        const j = JSON.parse(p.body);
+        assert.equal(j.method, 'initialize');
+        assert.equal(j.jsonrpc, '2.0');
+        assert.equal(p.headers['mcp-protocol-version'], '2025-11-25');
+        assert.match(p.headers.accept, /application\/json/);
+        assert.match(p.headers.accept, /text\/event-stream/);
+        assert.equal(p.headers['content-type'], 'application/json');
+      }
+      const deletes = log.filter((r) => r.method === 'DELETE');
+      assert.deepEqual(deletes.map((r) => `${r.host}${r.path}`).sort(), ['mcp-public.fixture/mcp-public', 'mcp-sse.fixture/mcp-sse']);
+      assert.equal(FIXTURE_SESSIONS_TERMINATED.length, 2);
+      assert.ok(FIXTURE_SESSIONS_TERMINATED.every((s) => s.length > 0));
+      const gets = log.filter((r) => r.method === 'GET');
+      assert.deepEqual(gets.map((r) => `${r.host}${r.path}`), ['mcp-protected.fixture/.well-known/oauth-protected-resource/mcp-protected']);
+      assert.equal(log.length, posts.length + deletes.length + gets.length);
+      assert.ok(log.every((r) => r.headers.authorization === undefined && r.headers.cookie === undefined));
+      assert.ok(log.every((r) => /^AgentDiscoveryCrawler\/0\.6 /.test(r.headers['user-agent'])));
+    });
+    await t('disclosure: findings.csv rows, Shopify roll-up, contact hints, email template and summary', async () => {
+      const hsFile = join(dir, 'handshake.jsonl');
+      writeFileSync(hsFile, results.map((r) => JSON.stringify(r)).join('\n') + '\n');
+      const sec = { path: '/.well-known/security.txt', valid: true, final_url: 'http://mcp-public.fixture/.well-known/security.txt' };
+      const as = (issuer: string, issuer_match: boolean, pkce: boolean) => ({ issuer, https: true, metadata_url: `${issuer}/.well-known/oauth-authorization-server`, status: 200, resolves: true, issuer_match, pkce_advertised: pkce, third_party_hosted: false });
+      const rowsFile = join(dir, 'results.jsonl');
+      writeFileSync(rowsFile, [
+        JSON.stringify({ host: 'mcp-public.fixture', rank: 10, mcp_card_path: '/.well-known/mcp-server-card', hygiene: [hyg('http://mcp-public.fixture/mcp-public')], probes: [sec], fingerprint: { primary: 'unknown', platforms: [] } }),
+        JSON.stringify({ host: 'dead.fixture', rank: 50, mcp_card_path: '/.well-known/mcp/server-card.json', hygiene: [{ ...hyg('http://127.0.0.1:1/mcp'), endpoint: { url: 'http://127.0.0.1:1/mcp', https: false, status: null, error: 'refused', reachable: false }, notes: ['endpoint_unreachable'] }], probes: [], fingerprint: { primary: 'unknown', platforms: [] } }),
+        JSON.stringify({ host: 'nocard-ep.fixture', rank: 70, mcp_card_path: '/.well-known/mcp-server-card', hygiene: [{ ...hyg('x'), endpoint: undefined, notes: ['no_endpoint_url_in_card'] }], probes: [], fingerprint: { primary: 'unknown', platforms: [] } }),
+        JSON.stringify({ host: 'idp.fixture', rank: 80, mcp_card_path: null, hygiene: [{ ...hyg('https://idp.fixture/mcp'), source: 'oauth_protected_resource', kind: 'protected_resource', authorization_servers: [as('https://as.fixture', false, false)], notes: ['prm_resource_mismatch', 'issuer_mismatch', 'no_pkce_advertised'] }], probes: [], fingerprint: { primary: 'unknown', platforms: [] } }),
+        JSON.stringify({ host: 'shop1.fixture', rank: 90, mcp_card_path: null, hygiene: [{ ...hyg('https://shop1.fixture/'), source: 'oauth_protected_resource', kind: 'protected_resource', authorization_servers: [as('https://shopify.com/authentication/123', false, true)], notes: ['issuer_mismatch'] }], probes: [], fingerprint: { primary: 'unknown', platforms: [] } }),
+        JSON.stringify({ host: 'shop2.fixture', rank: 91, mcp_card_path: null, hygiene: [{ ...hyg('https://shop2.fixture/'), source: 'oauth_protected_resource', kind: 'protected_resource', authorization_servers: [as('https://shopify.com/authentication/456', false, false)], notes: ['issuer_mismatch', 'no_pkce_advertised'] }], probes: [], fingerprint: { primary: 'shopify', platforms: ['shopify'] } }),
+      ].join('\n') + '\n');
+      assert.equal(isShopifyIssuer('https://shopify.com/authentication/123'), true);
+      assert.equal(isShopifyIssuer('https://accounts.shopify.com/authentication/1'), true);
+      assert.equal(isShopifyIssuer('https://as.fixture'), false);
+      assert.equal(isShopifyHost({ fingerprint: { primary: 'shopify', platforms: [] } as never, hygiene: [] }), true);
+      assert.equal(securityTxtContact('Expires: x\nContact: mailto:sec@h.test\nContact: https://h.test/r\n'), 'mailto:sec@h.test');
+      assert.equal(csvEscape('a "b", c'), '"a ""b"", c"');
+      const b = await buildFindings({ handshakeFile: hsFile, resultsFiles: [rowsFile], scheme: 'http' });
+      const f = (host: string, finding: string) => b.findings.find((x) => x.host === host && x.finding === finding);
+      // no_challenge_200 from the handshake file: public + sse (sse host has no results row -> rank from the handshake row, hint WHOIS)
+      assert.equal(f('mcp-public.fixture', 'no_challenge_200')?.severity, 'medium');
+      assert.match(f('mcp-public.fixture', 'no_challenge_200')!.evidence, /POST initialize http:\/\/mcp-public\.fixture\/mcp-public -> 200 .*fixture-public-mcp@9\.9\.9.*DELETE/);
+      assert.equal(f('mcp-public.fixture', 'no_challenge_200')!.contact_hint, 'security.txt: http://mcp-public.fixture/.well-known/security.txt');
+      assert.equal(f('mcp-sse.fixture', 'no_challenge_200')!.contact_hint, 'WHOIS/abuse');
+      assert.equal(f('mcp-sse.fixture', 'no_challenge_200')!.rank, 20);
+      assert.ok(!f('mcp-protected.fixture', 'no_challenge_200'));
+      assert.match(f('dead.fixture', 'dead_card_endpoint')!.evidence, /127\.0\.0\.1:1\/mcp -> refused/);
+      assert.equal(f('nocard-ep.fixture', 'card_without_endpoint')?.severity, 'info');
+      assert.ok(f('idp.fixture', 'prm_resource_mismatch'));
+      assert.match(f('idp.fixture', 'prm_issuer_mismatch')!.evidence, /as\.fixture\/\.well-known\/oauth-authorization-server -> 200/);
+      assert.ok(f('idp.fixture', 'no_pkce_advertised'));
+      // Shopify: no per-storefront rows, one aggregate row
+      assert.ok(!b.findings.some((x) => /^shop\d\.fixture$/.test(x.host)));
+      const agg = f('shopify-platform-pattern', 'shopify-platform-pattern')!;
+      assert.ok(agg);
+      assert.match(agg.evidence, /^2 Shopify storefront hosts; .*issuer_mismatch_two_issuer=2/);
+      assert.match(agg.evidence, /no_pkce_advertised=1/);
+      assert.equal(b.counts['shopify-platform-pattern'], 1);
+      assert.equal(b.counts.no_challenge_200, 2);
+      assert.equal(b.hosts, 5);
+      const csv = renderCsv(b.findings);
+      assert.equal(csv.split('\n')[0], 'host,rank,finding,evidence,severity,contact_hint,notified_on,remediated_on,notes');
+      assert.equal(csv.trim().split('\n').length, b.findings.length + 1);
+      assert.ok(EMAIL_TEMPLATE.includes('{{host}}') && EMAIL_TEMPLATE.includes('90 days') && EMAIL_TEMPLATE.includes('{{optout_email}}') && EMAIL_TEMPLATE.includes('DELETE'));
+      const sum = renderSummary(b, { handshakeFile: hsFile, resultsFiles: [rowsFile] });
+      assert.match(sum, /\| no_challenge_200 \| medium \| 2 \|/);
+      assert.match(sum, /Shopify storefront hosts rolled into one row: 2/);
+      // hygieneFindings on a Shopify-issuer host alone yields no issuer_mismatch row
+      const shopRow = { host: 'shop1.fixture', hygiene: [{ ...hyg('https://shop1.fixture/'), source: 'oauth_protected_resource', kind: 'protected_resource', authorization_servers: [as('https://shopify.com/authentication/123', false, true)], notes: ['issuer_mismatch'] }] } as unknown as HostResult;
+      assert.deepEqual(hygieneFindings(shopRow, { rank: 90, shopify: true, security_txt_valid: false, security_txt_url: null, security_txt_body_file: null }, (p) => p), []);
+    });
+  } finally {
+    fx.server.close();
+    if (savedFixturePort === undefined) delete process.env.CRAWLER_FIXTURE_PORT; else process.env.CRAWLER_FIXTURE_PORT = savedFixturePort;
+    FIXTURE_REQUEST_LOG.length = 0;
+  }
+}
 
 // ---- 0.4.0: WebMCP module end to end on the fixture vhosts (headless Chromium) ----
 const chromiumPath = resolveChromiumPath();

@@ -35,6 +35,12 @@ function parseArgs(argv: string[]): Args {
   return a;
 }
 
+/** 'webmcp' if any token's feature matches WebMCP / modelContext, 'other' if there are tokens but none does, null for no tokens. */
+export function originTrialKind(tokens: { feature: string | null }[]): 'webmcp' | 'other' | null {
+  if (!tokens.length) return null;
+  return tokens.some((t) => t.feature && /webmcp|modelcontext/i.test(t.feature)) ? 'webmcp' : 'other';
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   const all = applyShard(await readHosts(args.hosts), args.shard);
@@ -59,8 +65,8 @@ async function main() {
   mkdirSync(dirname(args.out), { recursive: true });
   const out = createWriteStream(args.out, { flags: 'a' });
   const limit = pLimit(args.concurrency);
-  const prog = { done: 0, withReg: 0, native: 0, trial: 0, declarative: 0, failed: 0, startedAt: Date.now() };
-  const line = () => `progress: ${prog.done}/${todo.length} done  registrations=${prog.withReg} native=${prog.native} origin-trial=${prog.trial} declarative=${prog.declarative} homepage-failed=${prog.failed}  elapsed=${fmtDuration((Date.now() - prog.startedAt) / 1000)}`;
+  const prog = { done: 0, withReg: 0, native: 0, trial: 0, otherTrials: 0, declarative: 0, failed: 0, startedAt: Date.now() };
+  const line = () => `progress: ${prog.done}/${todo.length} done  registrations=${prog.withReg} native=${prog.native} webmcp-origin-trial=${prog.trial} other_trials=${prog.otherTrials} declarative=${prog.declarative} homepage-failed=${prog.failed}  elapsed=${fmtDuration((Date.now() - prog.startedAt) / 1000)}`;
   const ticker = args.progress ? setInterval(() => console.error(line()), 60_000) : null;
   if (ticker) ticker.unref();
 
@@ -85,11 +91,14 @@ async function main() {
     prog.done++;
     if (r.registrations.length) prog.withReg++;
     if (r.native_modelContext || r.native_document_modelContext) prog.native++;
-    if (r.origin_trial.present) prog.trial++;
+    // count only tokens whose feature is WebMCP; sites run other origin trials too
+    const trialKind = originTrialKind(r.origin_trial.tokens);
+    if (trialKind === 'webmcp') prog.trial++;
+    else if (trialKind === 'other') prog.otherTrials++;
     if (r.declarative_hits.length) prog.declarative++;
     if (!r.pages_visited.length) prog.failed++;
     const tools = r.registrations.filter((x) => x.tool_name).map((x) => x.tool_name).slice(0, 5);
-    console.error(`[${prog.done}/${todo.length}] ${host} pages=${r.pages_visited.length} reg=${r.registrations.length}${tools.length ? '(' + tools.join(',') + ')' : ''} native=${r.native_modelContext ? 'Y' : 'n'} trial=${r.origin_trial.present ? r.origin_trial.feature ?? 'Y' : 'n'} decl=${r.declarative_hits.length} robots-skipped=${r.robots.skipped.length}${r.errors.length ? ' err=' + r.errors[0] : ''} ${r.duration_ms}ms`);
+    console.error(`[${prog.done}/${todo.length}] ${host} pages=${r.pages_visited.length} reg=${r.registrations.length}${tools.length ? '(' + tools.join(',') + ')' : ''} native=${r.native_modelContext ? 'Y' : 'n'} trial=${r.origin_trial.present ? (originTrialKind(r.origin_trial.tokens) === 'webmcp' ? r.origin_trial.feature : 'other:' + (r.origin_trial.feature ?? '?')) : 'n'} decl=${r.declarative_hits.length} robots-skipped=${r.robots.skipped.length}${r.errors.length ? ' err=' + r.errors[0] : ''} ${r.duration_ms}ms`);
     if (!out.write(JSON.stringify(r) + '\n')) await once(out, 'drain');
   })));
   if (ticker) clearInterval(ticker);

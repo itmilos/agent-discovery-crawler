@@ -221,7 +221,7 @@ export function renderBandFile(meta: Pick<TrancoMeta, 'list_id' | 'list_tag' | '
 
 export interface WriteOptions { outDir: string; listId: string | null; source: string; now?: Date; crawlerVersion: string }
 
-/** Write band files, the tranco-latest-<band>.txt copies and the sidecar meta JSON. Returns the meta. */
+/** Write band files, the tranco-latest-<band>.txt copies and the sidecar meta JSON (merged into an existing one for the same list id). Returns the merged meta. */
 export function writeCorpus(results: BandResult[], csvRows: number, opts: WriteOptions): { meta: TrancoMeta; metaPath: string } {
   const now = opts.now ?? new Date();
   const listTag = opts.listId ?? now.toISOString().slice(0, 10);
@@ -243,8 +243,18 @@ export function writeCorpus(results: BandResult[], csvRows: number, opts: WriteO
     meta.bands[r.band.label] = { from: r.band.from, to: r.band.to, input_rows: r.input_rows, hosts: r.hosts.length, dedupe_losses: r.dedupe_losses, unparseable: r.unparseable, file, latest };
   }
   const metaPath = join(opts.outDir, `tranco-${listTag}.meta.json`);
-  writeFileSync(metaPath, JSON.stringify(meta, null, 2) + '\n');
-  return { meta, metaPath };
+  // MERGE into an existing sidecar for the same list: `--bands 1k-10k` run after
+  // `--bands 1-1k` must not erase the 1-1k entry. Same-label bands are replaced,
+  // other bands kept; top-level provenance is the latest run's.
+  let merged: TrancoMeta = meta;
+  if (existsSync(metaPath)) {
+    try {
+      const prev = JSON.parse(readFileSync(metaPath, 'utf8')) as Partial<TrancoMeta>;
+      merged = { ...prev, ...meta, bands: { ...(prev.bands ?? {}), ...meta.bands } } as TrancoMeta;
+    } catch { /* corrupt sidecar: overwrite */ }
+  }
+  writeFileSync(metaPath, JSON.stringify(merged, null, 2) + '\n');
+  return { meta: merged, metaPath };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 // Hygiene checks for valid MCP/A2A cards and protected-resource docs
 // (paper §4.6 a–d, post-review). Check (e) — unauthenticated MCP initialize —
-// is deliberately NOT performed in this pass; see TODO below and README.
+// is deliberately NOT performed here: it is the separate, ethics-gated pass in
+// src/handshake.ts (npm run handshake) over these results.
 import { fetchUrl, bodyText, sameRegistrableDomain } from './http.js';
 import { parseJson, validateJsonArtifact } from './validate.js';
 import type { AuthServerCheck, EndpointCheck, HygieneEntry, PrmCheck, ProbeResult } from './types.js';
@@ -203,9 +204,7 @@ export async function runHygiene(host: string, probes: ProbeResult[], timeoutMs 
       bearer_query_allowed: null,
       hsts: p.hsts ?? null,
       cache_control: p.cache_control ?? null,
-      // TODO(paper §4.6e): send a JSON-RPC `initialize` to the MCP endpoint
-      // without credentials and record whether it is accepted. Not done in
-      // this pass: requires a disclosure process (>=45 days) before publication.
+      // §4.6e lives in src/handshake.ts (separate gated pass); never populated inline.
       mcp_unauthenticated_initialize: null,
       notes,
     };

@@ -1,0 +1,192 @@
+{
+  "built_at": "2026-10-06T18:06:31.300Z",
+  "crawler_version": "0.6.0",
+  "tranco_files": [
+    "hosts/tranco-latest-1-1k.txt",
+    "hosts/tranco-latest-1k-10k.txt",
+    "hosts/tranco-latest-10k-100k.txt"
+  ],
+  "hosts_considered": 99996,
+  "labelled": {
+    "ok": 99996,
+    "not_found": 0,
+    "error": 0,
+    "unlabelled": 0
+  },
+  "labels_window": {
+    "first": "2026-10-06T17:38:13.599Z",
+    "last": "2026-10-06T18:06:31.295Z"
+  },
+  "commerce_regex": "shopping|auction|e-?commerce|marketplace|retail|classifieds|coupons?",
+  "fintech_regex": "financ|bank|insurance|invest|trading|brokerage|crypto|payment|fintech|lending|loans?|accounting|tax",
+  "commerce": 7810,
+  "fintech": 4050,
+  "overlap": 48,
+  "categories_top": [
+    {
+      "name": "Technology",
+      "hosts": 29408
+    },
+    {
+      "name": "Entertainment",
+      "hosts": 16610
+    },
+    {
+      "name": "Business & Economy",
+      "hosts": 14306
+    },
+    {
+      "name": "Business",
+      "hosts": 10446
+    },
+    {
+      "name": "CIPA Filter",
+      "hosts": 9566
+    },
+    {
+      "name": "CIPA",
+      "hosts": 9566
+    },
+    {
+      "name": "Content Servers",
+      "hosts": 9476
+    },
+    {
+      "name": "Education",
+      "hosts": 7818
+    },
+    {
+      "name": "Shopping & Auctions",
+      "hosts": 7810
+    },
+    {
+      "name": "News & Media",
+      "hosts": 6516
+    },
+    {
+      "name": "Society & Lifestyle",
+      "hosts": 6383
+    },
+    {
+      "name": "Ecommerce",
+      "hosts": 6160
+    },
+    {
+      "name": "Government & Politics",
+      "hosts": 5718
+    },
+    {
+      "name": "Information Technology",
+      "hosts": 5241
+    },
+    {
+      "name": "Internet Communication",
+      "hosts": 4728
+    },
+    {
+      "name": "Politics, Advocacy, and Government-Related",
+      "hosts": 4340
+    },
+    {
+      "name": "Adult Themes",
+      "hosts": 4307
+    },
+    {
+      "name": "Pornography",
+      "hosts": 3918
+    },
+    {
+      "name": "Gaming",
+      "hosts": 3540
+    },
+    {
+      "name": "Video Streaming",
+      "hosts": 3357
+    },
+    {
+      "name": "Educational Institutions",
+      "hosts": 3231
+    },
+    {
+      "name": "Gambling",
+      "hosts": 2984
+    },
+    {
+      "name": "Health",
+      "hosts": 2411
+    },
+    {
+      "name": "Health & Fitness",
+      "hosts": 2403
+    },
+    {
+      "name": "Travel",
+      "hosts": 2321
+    },
+    {
+      "name": "Ads",
+      "hosts": 2138
+    },
+    {
+      "name": "Sports",
+      "hosts": 2006
+    },
+    {
+      "name": "Personal Finance",
+      "hosts": 1942
+    },
+    {
+      "name": "Trackers/Analytics",
+      "hosts": 1859
+    },
+    {
+      "name": "Economy & Finance",
+      "hosts": 1690
+    },
+    {
+      "name": "Shareware/Freeware",
+      "hosts": 1678
+    },
+    {
+      "name": "Personal Blogs",
+      "hosts": 1593
+    },
+    {
+      "name": "Miscellaneous",
+      "hosts": 1581
+    },
+    {
+      "name": "Vehicles",
+      "hosts": 1474
+    },
+    {
+      "name": "Fashion",
+      "hosts": 1369
+    },
+    {
+      "name": "Clothing",
+      "hosts": 1302
+    },
+    {
+      "name": "Movies",
+      "hosts": 1229
+    },
+    {
+      "name": "Login Screens",
+      "hosts": 1178
+    },
+    {
+      "name": "Forums",
+      "hosts": 1154
+    },
+    {
+      "name": "Search Engines",
+      "hosts": 1141
+    }
+  ],
+  "files": {
+    "commerce": "hosts/commerce-latest.txt",
+    "fintech": "hosts/fintech-latest.txt",
+    "labels": "hosts/radar-labels.jsonl"
+  }
+}

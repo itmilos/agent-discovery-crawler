@@ -157,7 +157,7 @@ export interface HygieneEntry {
   /** Strict-Transport-Security on the card response */
   hsts: string | null;
   cache_control: string | null;
-  /** TODO: not sent in this pass (paper §4.6(e)). Always null here. */
+  /** Always null inline: §4.6(e) is the separate, gated handshake pass (src/handshake.ts -> out/handshake.jsonl). */
   mcp_unauthenticated_initialize: null;
   notes: string[];
 }

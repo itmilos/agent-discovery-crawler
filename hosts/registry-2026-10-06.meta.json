@@ -1,0 +1,23 @@
+{
+  "built_at": "2026-10-06T14:45:42.692Z",
+  "crawler_version": "0.6.0",
+  "sources": {
+    "official": {
+      "servers": 40016,
+      "endpoints": 25387,
+      "hosts": 17238
+    }
+  },
+  "hosts": 17238,
+  "hosts_in_tranco": 2257,
+  "tranco_files": [
+    "hosts/tranco-latest-1-1k.txt",
+    "hosts/tranco-latest-1k-10k.txt",
+    "hosts/tranco-latest-10k-100k.txt"
+  ],
+  "files": {
+    "hosts": "hosts/registry-2026-10-06.txt",
+    "endpoints": "hosts/registry-2026-10-06.endpoints.jsonl",
+    "latest": "hosts/registry-latest.txt"
+  }
+}

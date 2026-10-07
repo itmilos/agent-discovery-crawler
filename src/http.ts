@@ -9,7 +9,7 @@ import { isIP } from 'node:net';
 import { brotliDecompressSync, gunzipSync, inflateSync, inflateRawSync } from 'node:zlib';
 import { getDomain } from 'tldts';
 
-export const CRAWLER_VERSION = '0.4.0';
+export const CRAWLER_VERSION = '0.6.0';
 export const MAX_BODY_BYTES = 2 * 1024 * 1024; // 2 MiB cap per response (post-decoding)
 export const DEFAULT_TIMEOUT_MS = 10_000;
 export const MAX_REDIRECTS = 3;
@@ -224,6 +224,31 @@ async function readBodyCapped(body: Dispatcher.ResponseData['body'], cap: number
 }
 
 /**
+ * Read an SSE stream up to and including the first complete event (a blank
+ * line), then abort the request so a server that keeps the stream open does
+ * not hold the probe until its timeout. Capped at 64 KiB.
+ */
+async function readFirstSseEvent(body: Dispatcher.ResponseData['body'], ac: AbortController): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  let total = 0;
+  let text = '';
+  try {
+    for await (const chunk of body) {
+      const b = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+      chunks.push(b);
+      total += b.length;
+      text += b.toString('utf8');
+      // skip leading comment/priming events that carry no data (": keepalive", "id: 1\ndata: \n\n")
+      if (/(^|\n)data:[^\n]*\S[^\n]*\n(?:[^\n]*\n)*?\n/.test(text) || total > 64 * 1024) {
+        ac.abort();
+        break;
+      }
+    }
+  } catch { /* aborted by us, or stream ended */ }
+  return Buffer.concat(chunks);
+}
+
+/**
  * undici.request() does NOT decode content-encoding (fetch() does). Decode
  * gzip / x-gzip / deflate / br here, in the order listed in the header
  * (last applied first), capping the decoded size. identity/unknown -> as is.
@@ -255,10 +280,39 @@ export function decodeBody(buf: Buffer, contentEncoding: string | null | undefin
 // ---------------------------------------------------------------------------
 
 export interface FetchOptions {
-  method?: 'GET' | 'HEAD';
+  method?: 'GET' | 'HEAD' | 'POST' | 'DELETE';
   timeoutMs?: number;
   maxRedirects?: number;
   accept?: string;
+  /** request body (POST only; the handshake probe's single JSON-RPC `initialize`) */
+  body?: string;
+  /** extra request headers (lower-case names); never an Authorization header from this crawler */
+  headers?: Record<string, string>;
+  /**
+   * SSE early stop: when the response is `text/event-stream`, stop reading
+   * after the first complete event (`\n\n`) and abort the stream instead of
+   * waiting for the server to close it. Used by the handshake probe.
+   */
+  stopAfterFirstSseEvent?: boolean;
+}
+
+/**
+ * Test hook: *.fixture hosts are routed to the local fixture server on
+ * 127.0.0.1:$CRAWLER_FIXTURE_PORT, keeping the original Host header. Inert
+ * unless the env var is set. Exported so the handshake probe shares it.
+ */
+export function resolveFixtureTarget(current: URL): { target: URL; extraHeaders: Record<string, string> } {
+  const fixturePort = process.env.CRAWLER_FIXTURE_PORT;
+  const extraHeaders: Record<string, string> = {};
+  let target: URL = current;
+  if (fixturePort && current.hostname.endsWith('.fixture')) {
+    target = new URL(current.toString());
+    target.protocol = 'http:';
+    target.hostname = '127.0.0.1';
+    target.port = fixturePort;
+    extraHeaders.host = current.host;
+  }
+  return { target, extraHeaders };
 }
 
 /**
@@ -285,16 +339,8 @@ export async function fetchUrl(url: string, opts: FetchOptions = {}): Promise<Fe
     const timer = setTimeout(() => ac.abort(), timeoutMs);
     try {
       // Test hook: route *.fixture hosts to the local fixture server, keeping the Host header.
-      const fixturePort = process.env.CRAWLER_FIXTURE_PORT;
-      let target: URL = current;
-      const extraHeaders: Record<string, string> = {};
-      if (fixturePort && current.hostname.endsWith('.fixture')) {
-        target = new URL(current.toString());
-        target.protocol = 'http:';
-        target.hostname = '127.0.0.1';
-        target.port = fixturePort;
-        extraHeaders.host = current.host;
-      }
+      const { target, extraHeaders } = resolveFixtureTarget(current);
+      const hasBody = method === 'POST' && opts.body !== undefined;
       const res = await request(target, {
         method,
         dispatcher: getDispatcher(timeoutMs),
@@ -304,15 +350,21 @@ export async function fetchUrl(url: string, opts: FetchOptions = {}): Promise<Fe
           'user-agent': userAgent(),
           accept: opts.accept ?? 'application/json, text/markdown, text/plain, application/yaml, text/yaml, text/html;q=0.5, */*;q=0.1',
           'accept-encoding': 'gzip, br, deflate',
+          ...(hasBody ? { 'content-type': 'application/json' } : {}),
+          ...(opts.headers ?? {}),
           ...extraHeaders,
         },
+        body: hasBody ? opts.body : undefined,
       });
       const headers: Record<string, string> = {};
       for (const [k, v] of Object.entries(res.headers)) {
         headers[k.toLowerCase()] = Array.isArray(v) ? v.join(', ') : String(v ?? '');
       }
       const status = res.statusCode;
-      if ([301, 302, 303, 307, 308].includes(status) && headers.location) {
+      // A POST/DELETE is only re-sent on 307/308 (method-preserving); a 301/302/303
+      // would turn it into a GET, which the handshake probe must never send.
+      const followable = method === 'GET' || method === 'HEAD' ? [301, 302, 303, 307, 308] : [307, 308];
+      if (followable.includes(status) && headers.location) {
         try { for await (const _ of res.body) { /* drain */ } } catch { /* ignore */ }
         let next: URL;
         try {
@@ -337,9 +389,13 @@ export async function fetchUrl(url: string, opts: FetchOptions = {}): Promise<Fe
       }
       let raw: Buffer = Buffer.alloc(0);
       let truncated = false;
-      if (method === 'GET') {
+      if (method !== 'HEAD') {
         // Read up to the cap of *encoded* bytes too, so a zip bomb cannot blow memory before decoding.
-        ({ buf: raw, truncated } = await readBodyCapped(res.body, MAX_BODY_BYTES));
+        if (opts.stopAfterFirstSseEvent && mediaType(headers['content-type']) === 'text/event-stream') {
+          raw = await readFirstSseEvent(res.body, ac);
+        } else {
+          ({ buf: raw, truncated } = await readBodyCapped(res.body, MAX_BODY_BYTES));
+        }
       } else {
         try { for await (const _ of res.body) { /* drain */ } } catch { /* ignore */ }
       }

@@ -7,6 +7,9 @@ SRC = {
   "tranco-1k-10k-local.jsonl":    "Tranco list 647LX ranks 1,001-10,000, crawled 2026-10-05 from one local vantage (crawler 0.3.2)",
   "tranco-10k-100k-local.jsonl":  "Tranco list 647LX ranks 10,001-100,000, crawled 2026-10-05/06 from one local vantage (crawler 0.4.0)",
   "webmcp-sample.jsonl":          "WebMCP headless pass over the 5,000-host stratified subsample (crawler 0.4.0), 2026-10-05",
+  "commerce-local.jsonl":         "Commerce corpus: 7,810 Tranco top-100K hosts with a Cloudflare shopping-type content category, crawled 2026-10-06 from one local vantage (crawler 0.6.0)",
+  "fintech-local.jsonl":          "Fintech corpus: 4,050 Tranco top-100K hosts with a Cloudflare finance-type content category, crawled 2026-10-06 from one local vantage (crawler 0.6.0)",
+  "registry-local.jsonl":         "MCP-registry corpus: 17,238 hostnames named as remote endpoints by the official MCP registry (snapshot 2026-10-06), crawled 2026-10-07 from one local vantage (crawler 0.6.0)",
 }
 STRIP = {"hygiene"}            # withheld until coordinated disclosure completes
 out_dir = "release/data"; os.makedirs(out_dir, exist_ok=True)
@@ -25,7 +28,7 @@ for name, desc in SRC.items():
         for chunk in iter(lambda: f.read(1 << 20), b""): h.update(chunk)
     manifest["files"].append({"file": os.path.basename(dst), "rows": n, "sha256": h.hexdigest(), "bytes": os.path.getsize(dst), "description": desc})
     print(f"{name}: {n} rows -> {dst} ({os.path.getsize(dst)/1e6:.1f} MB)")
-for extra in ["out/tranco-bands-summary.txt", "out/webmcp-sample-summary.txt", "hosts/tranco-647LX.meta.json", "hosts/webmcp-sample.meta.json"]:
+for extra in ["out/tranco-bands-summary.txt", "out/tranco-10k-100k-summary.txt", "out/webmcp-sample-summary.txt", "out/commerce-summary.txt", "out/fintech-summary.txt", "out/registry-summary.txt", "hosts/tranco-647LX.meta.json", "hosts/webmcp-sample.meta.json", "hosts/radar-2026-10-06.meta.json", "hosts/registry-2026-10-07.meta.json", "hosts/registry-2026-10-07.endpoints.jsonl", "hosts/commerce-latest.txt", "hosts/fintech-latest.txt", "hosts/registry-latest.txt"]:
     if os.path.exists(extra):
         import shutil; shutil.copy(extra, out_dir); manifest["files"].append({"file": os.path.basename(extra), "description": "summary/metadata"})
 json.dump(manifest, open(os.path.join(out_dir, "MANIFEST.json"), "w"), indent=2)

@@ -13,6 +13,15 @@
 //                      (feature-detected), /tools calls provideContext and carries a declarative
 //                      <form toolname>, /trial has an origin-trial meta, /private/* is robots-disallowed
 //   webmcp-none.fixture — plain pages, no WebMCP anything, no robots.txt
+//   mcp-public.fixture    — handshake probe: card -> /mcp-public, answers initialize with a JSON-RPC
+//                           result + Mcp-Session-Id and no auth; DELETE terminates the session
+//   mcp-sse.fixture       — card -> /mcp-sse, same but the InitializeResult comes as an SSE stream
+//                           that stays open (the probe must stop after the first event)
+//   mcp-protected.fixture — card -> /mcp-protected, 401 + WWW-Authenticate Bearer resource_metadata
+//                           pointing at /.well-known/oauth-protected-resource/mcp-protected
+//   mcp-html.fixture      — card -> /mcp-html, 200 text/html (a web page squatting the endpoint)
+// Every request is appended to FIXTURE_REQUEST_LOG (host, method, path, body) so the
+// self-test can assert what the handshake probe did and did not send.
 // good.fixture serves several artifacts compressed (gzip / br / deflate) when the
 // client advertises it, which is how CDNs answer the crawler in the wild.
 // Usage: tsx src/fixture-server.ts [port]   then
@@ -21,7 +30,11 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { brotliCompressSync, deflateSync, gzipSync } from 'node:zlib';
 import { makeFakeOriginTrialToken } from './webmcp.js';
 
-type Handler = (path: string, req: IncomingMessage, res: ServerResponse) => boolean;
+type Handler = (path: string, req: IncomingMessage, res: ServerResponse, body: string) => boolean;
+
+export interface FixtureRequest { host: string; method: string; path: string; body: string; headers: Record<string, string> }
+/** Every request the fixture server saw, in order (reset with FIXTURE_REQUEST_LOG.length = 0). */
+export const FIXTURE_REQUEST_LOG: FixtureRequest[] = [];
 
 function send(res: ServerResponse, status: number, body: string, type: string, extra: Record<string, string> = {}) {
   res.writeHead(status, { 'content-type': type, 'content-length': Buffer.byteLength(body), ...extra });
@@ -279,17 +292,92 @@ const webmcpNone: Handler = (path, _req, res) => {
   return false; // robots.txt -> 404
 };
 
-const vhosts: Record<string, Handler> = { 'webmcp.fixture': webmcp, 'webmcp-none.fixture': webmcpNone, 'docs.broken.fixture': docsBroken, 'good.fixture': good, 'spa.fixture': spa, 'broken.fixture': broken, 'blocked.fixture': blocked, 'empty.fixture': empty, 'redirect.fixture': redirect, 'apex.fixture': apex, 'www.apex.fixture': wwwApex };
+// ---- MCP initialize handshake fixtures (src/handshake.ts) ----
+function jsonRpcBody(body: string): { id: unknown; method: string | null } {
+  try { const j = JSON.parse(body); return { id: j.id ?? null, method: typeof j.method === 'string' ? j.method : null }; } catch { return { id: null, method: null }; }
+}
+const initializeResult = (id: unknown, name: string) => JSON.stringify({ jsonrpc: '2.0', id, result: { protocolVersion: '2025-11-25', capabilities: { tools: { listChanged: true }, resources: {} }, serverInfo: { name, version: '9.9.9' }, instructions: 'fixture' } });
+/** Shared card for the mcp-*.fixture vhosts: SEP-2127, one remote at /<endpointPath>. */
+function mcpCard(host: string, endpointPath: string): Handler {
+  return (path, _req, res) => {
+    if (path === '/.well-known/mcp-server-card') {
+      send(res, 200, JSON.stringify({ name: `fixture.${host.split('.')[0]}`, version: '1.0.0', remotes: [{ type: 'streamable-http', url: `${base(host)}${endpointPath}` }] }), 'application/json');
+      return true;
+    }
+    if (path === '/') { send(res, 200, '<html><body>mcp fixture</body></html>', 'text/html'); return true; }
+    return false;
+  };
+}
+export const FIXTURE_SESSIONS_TERMINATED: string[] = [];
+const mcpPublic: Handler = (path, req, res, body) => {
+  if (path !== '/mcp-public') return mcpCard('mcp-public.fixture', '/mcp-public')(path, req, res, body);
+  if (req.method === 'DELETE') {
+    const sid = String(req.headers['mcp-session-id'] ?? '');
+    if (!sid) { send(res, 400, 'missing Mcp-Session-Id', 'text/plain'); return true; }
+    FIXTURE_SESSIONS_TERMINATED.push(sid);
+    res.writeHead(204); res.end(); return true;
+  }
+  if (req.method !== 'POST') { res.writeHead(405, { allow: 'POST, DELETE' }); res.end(); return true; }
+  const { id, method } = jsonRpcBody(body);
+  if (method !== 'initialize') { send(res, 400, JSON.stringify({ jsonrpc: '2.0', id, error: { code: -32600, message: 'fixture: only initialize is answered' } }), 'application/json'); return true; }
+  send(res, 200, initializeResult(id, 'fixture-public-mcp'), 'application/json', { 'mcp-session-id': 'sess-' + Math.random().toString(16).slice(2) });
+  return true;
+};
+const mcpSse: Handler = (path, req, res, body) => {
+  if (path !== '/mcp-sse') return mcpCard('mcp-sse.fixture', '/mcp-sse')(path, req, res, body);
+  if (req.method === 'DELETE') { const sid = String(req.headers['mcp-session-id'] ?? ''); FIXTURE_SESSIONS_TERMINATED.push(sid); res.writeHead(200); res.end(); return true; }
+  if (req.method !== 'POST') { res.writeHead(405, { allow: 'POST' }); res.end(); return true; }
+  const { id } = jsonRpcBody(body);
+  res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-cache', 'mcp-session-id': 'sse-session-1' });
+  res.write(': keepalive\n\n');
+  res.write('id: 1\ndata: \n\n'); // priming event, empty data (2025-11-25 §Sending Messages item 6)
+  res.write(`id: 2\nevent: message\ndata: ${initializeResult(id, 'fixture-sse-mcp')}\n\n`);
+  // keep the stream open: the probe must not wait for us
+  const keep = setInterval(() => { try { res.write(': ping\n\n'); } catch { clearInterval(keep); } }, 500);
+  keep.unref();
+  req.on('close', () => { clearInterval(keep); try { res.end(); } catch { /* closed */ } });
+  return true;
+};
+const mcpProtected: Handler = (path, req, res, body) => {
+  const origin = base('mcp-protected.fixture');
+  if (path === '/.well-known/oauth-protected-resource/mcp-protected') {
+    send(res, 200, JSON.stringify({ resource: `${origin}/mcp-protected`, authorization_servers: [origin], bearer_methods_supported: ['header'] }), 'application/json');
+    return true;
+  }
+  if (path === '/.well-known/oauth-authorization-server') {
+    send(res, 200, JSON.stringify({ issuer: origin, authorization_endpoint: `${origin}/authorize`, token_endpoint: `${origin}/token`, response_types_supported: ['code'], code_challenge_methods_supported: ['S256'] }), 'application/json');
+    return true;
+  }
+  if (path !== '/mcp-protected') return mcpCard('mcp-protected.fixture', '/mcp-protected')(path, req, res, body);
+  if (req.headers.authorization) { send(res, 403, 'fixture never expects credentials', 'text/plain'); return true; }
+  send(res, 401, JSON.stringify({ error: 'unauthorized' }), 'application/json', { 'www-authenticate': `Bearer realm="mcp", resource_metadata="${origin}/.well-known/oauth-protected-resource/mcp-protected", error="invalid_request"` });
+  return true;
+};
+const mcpHtml: Handler = (path, req, res, body) => {
+  if (path !== '/mcp-html') return mcpCard('mcp-html.fixture', '/mcp-html')(path, req, res, body);
+  send(res, 200, '<!doctype html><html><head><title>Welcome</title></head><body><h1>Marketing page</h1></body></html>', 'text/html; charset=utf-8');
+  return true;
+};
+
+const vhosts: Record<string, Handler> = { 'mcp-public.fixture': mcpPublic, 'mcp-sse.fixture': mcpSse, 'mcp-protected.fixture': mcpProtected, 'mcp-html.fixture': mcpHtml, 'webmcp.fixture': webmcp, 'webmcp-none.fixture': webmcpNone, 'docs.broken.fixture': docsBroken, 'good.fixture': good, 'spa.fixture': spa, 'broken.fixture': broken, 'blocked.fixture': blocked, 'empty.fixture': empty, 'redirect.fixture': redirect, 'apex.fixture': apex, 'www.apex.fixture': wwwApex };
 
 export const FIXTURE_VHOSTS = Object.keys(vhosts);
 
 /** Start the fixture server (port 0 = ephemeral; used by the self-test). Resolves with the bound port. */
 export function startFixtureServer(port: number): Promise<{ server: Server; port: number }> {
   const server = createServer((req, res) => {
-    const host = (req.headers.host ?? '').split(':')[0];
-    const path = new URL(req.url ?? '/', 'http://x').pathname;
-    const h = vhosts[host] ?? empty;
-    if (!h(path, req, res)) send(res, 404, 'Not Found', 'text/plain');
+    const chunks: Buffer[] = [];
+    req.on('data', (c: Buffer) => chunks.push(c));
+    req.on('end', () => {
+      const body = Buffer.concat(chunks).toString('utf8');
+      const host = (req.headers.host ?? '').split(':')[0];
+      const path = new URL(req.url ?? '/', 'http://x').pathname;
+      const headers: Record<string, string> = {};
+      for (const [k, v] of Object.entries(req.headers)) headers[k] = Array.isArray(v) ? v.join(', ') : String(v ?? '');
+      FIXTURE_REQUEST_LOG.push({ host, method: req.method ?? '', path, body, headers });
+      const h = vhosts[host] ?? empty;
+      if (!h(path, req, res, body)) send(res, 404, 'Not Found', 'text/plain');
+    });
   });
   return new Promise((resolve, reject) => {
     server.once('error', reject);

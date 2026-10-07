@@ -1,0 +1,79 @@
+host,rank,to,contact_source,findings,sent_on
+aave.com,35244,security@aave.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+agentskills.io,76062,security@agentskills.io,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+augmentcode.com,54368,security@augmentcode.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+bazel.build,96749,security@bazel.build,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+bitpanda.com,32763,security@bitpanda.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+carjet.com,71359,security@carjet.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+chainstack.com,29443,security@chainstack.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+chatboxai.app,69089,security@chatboxai.app,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,2,2026-10-06
+checkatrade.com,28628,security@checkatrade.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,2,2026-10-06
+clerk.com,8302,security@clerk.com,security.txt points to a form: https://clerk.com/docs/guides/how-clerk-works/security/vulnerability-disclosure-policy,1,2026-10-06
+cloudflare.com,2,security@cloudflare.com,security.txt points to a form: https://hackerone.com/cloudflare,1,2026-10-06
+code.storage,63083,security@code.storage,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+coinbase.com,2278,security@coinbase.com,security.txt points to a form: https://hackerone.com/coinbase,1,2026-10-06
+commoninja.com,36410,security@commoninja.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+context7.com,24148,security@context7.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+dash0.com,30512,security@dash0.com,security.txt,1,2026-10-06
+datacamp.com,8745,security@datacamp.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+devin.ai,14031,security@devin.ai,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,2,2026-10-06
+doyouitaly.com,82410,security@doyouitaly.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+doyouspain.com,70933,security@doyouspain.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+elevenlabs.io,3722,security@elevenlabs.io,security.txt points to a form: https://elevenlabs.io/security/report,1,2026-10-06
+finanzguru.de,69188,security@finanzguru.de,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+fluege.de,44730,security@fluege.de,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+fly.io,27775,security@fly.io,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+forter.com,279,security@forter.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+frase.io,36921,security@frase.io,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+fundraiseup.com,21353,security@fundraiseup.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+gcore.com,9305,bugbounty@gcore.com,security.txt,1,2026-10-06
+getname.pl,58011,security@getname.pl,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,2,2026-10-06
+glance.com,4939,security@glance.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,2,2026-10-06
+gogs.io,43135,security@gogs.io,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+growsurf.com,98094,security@growsurf.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+gymbeam.cz,41959,security@gymbeam.cz,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+gymbeam.gr,78172,security@gymbeam.gr,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+gymbeam.hu,50434,security@gymbeam.hu,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+gymbeam.it,99394,security@gymbeam.it,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+gymbeam.pl,89218,security@gymbeam.pl,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+gymbeam.ro,56203,security@gymbeam.ro,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+gymbeam.sk,49186,security@gymbeam.sk,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+gymbeam.ua,95972,security@gymbeam.ua,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+hellolanding.com,23447,security@hellolanding.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+idescat.cat,58382,security@idescat.cat,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+instastatistics.com,65457,security@instastatistics.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+isabel.eu,65441,security@isabel.eu,security.txt,2,2026-10-06
+leadpages.com,48393,security@leadpages.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+legalzoom.com,8499,security@legalzoom.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+lelo.com,67169,security@lelo.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+limoo.host,34379,security@limoo.host,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+lobehub.com,54188,security@lobehub.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,3,2026-10-06
+loi.com.uy,86834,seguridad@loi.com.uy,security.txt,1,2026-10-06
+mailinator.com,42965,security@mailinator.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,2,2026-10-06
+mercury.com,22882,security@mercury.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+modelcontextprotocol.io,11923,security@modelcontextprotocol.io,security.txt points to a form: https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/SECURITY.md,1,2026-10-06
+monday.com,3213,security@monday.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+mundoinspiradoz.com,93948,security@mundoinspiradoz.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+opensea.io,4421,security@opensea.io,security.txt,2,2026-10-06
+parallel.ai,95716,security@parallel.ai,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+postmarkapp.com,22684,security@postmarkapp.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+pydantic.dev,54512,security@pydantic.dev,security.txt,1,2026-10-06
+quicknode.com,96717,security@quicknode.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+razorpay.com,3281,security@razorpay.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+rhombus.com,15888,security@rhombussystems.com,security.txt,2,2026-10-06
+rohlik.cz,91697,security@rohlik.cz,security.txt,1,2026-10-06
+sapling.ai,77677,security@sapling.ai,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+schemastore.org,37858,security@schemastore.org,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+shrenz.com,84151,security@shrenz.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+supercasa.pt,39808,security@supercasa.pt,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+techaro.lol,25938,security@techaro.lol,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+technocore.chat,78356,security@technocore.chat,security.txt points to a form: https://github.com/flop-labs/technocore-chat/security/advisories/new,2,2026-10-06
+telnyx.com,22038,security@telnyx.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,2,2026-10-06
+trend.az,33257,security@trend.az,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+twilio.com,1387,security@twilio.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,2,2026-10-06
+vast.ai,24099,security@vast.ai,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+venice.ai,17258,security@venice.ai,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+voiceflow.com,39933,security@voiceflow.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+windowsforum.com,70123,security@windowsforum.com,security.txt points to a form: https://windowsforum.com/misc/contact,1,2026-10-06
+wpastra.com,1719,security@wpastra.com,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06
+xrpl.org,72187,security@xrpl.org,RFC 2142 default (no security.txt found); also try abuse@ and the registrar WHOIS contact,1,2026-10-06

@@ -5,3 +5,7 @@ blocked.fixture
 empty.fixture
 redirect.fixture
 apex.fixture
+mcp-public.fixture
+mcp-sse.fixture
+mcp-protected.fixture
+mcp-html.fixture
