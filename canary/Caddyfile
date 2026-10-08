@@ -1,0 +1,259 @@
+birch.technical.pm {
+    root * /srv/canary/sites/birch.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/birch.technical.pm.log
+    }
+}
+
+pebble.technical.pm {
+    root * /srv/canary/sites/pebble.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/pebble.technical.pm.log
+    }
+}
+
+fjord.technical.pm {
+    root * /srv/canary/sites/fjord.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/fjord.technical.pm.log
+    }
+}
+
+meadow.technical.pm {
+    root * /srv/canary/sites/meadow.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/meadow.technical.pm.log
+    }
+}
+
+ember.technical.pm {
+    root * /srv/canary/sites/ember.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/ember.technical.pm.log
+    }
+}
+
+inlet.technical.pm {
+    root * /srv/canary/sites/inlet.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/inlet.technical.pm.log
+    }
+}
+
+cedar.technical.pm {
+    root * /srv/canary/sites/cedar.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/cedar.technical.pm.log
+    }
+}
+
+nectar.technical.pm {
+    root * /srv/canary/sites/nectar.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/nectar.technical.pm.log
+    }
+}
+
+kestrel.technical.pm {
+    root * /srv/canary/sites/kestrel.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/kestrel.technical.pm.log
+    }
+}
+
+delta.technical.pm {
+    root * /srv/canary/sites/delta.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/delta.technical.pm.log
+    }
+}
+
+summit.technical.pm {
+    root * /srv/canary/sites/summit.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/summit.technical.pm.log
+    }
+}
+
+atlas.technical.pm {
+    root * /srv/canary/sites/atlas.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/atlas.technical.pm.log
+    }
+}
+
+lumen.technical.pm {
+    root * /srv/canary/sites/lumen.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/lumen.technical.pm.log
+    }
+}
+
+quartz.technical.pm {
+    root * /srv/canary/sites/quartz.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/quartz.technical.pm.log
+    }
+}
+
+juniper.technical.pm {
+    root * /srv/canary/sites/juniper.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/juniper.technical.pm.log
+    }
+}
+
+timber.technical.pm {
+    root * /srv/canary/sites/timber.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/timber.technical.pm.log
+    }
+}
+
+harbor.technical.pm {
+    root * /srv/canary/sites/harbor.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/harbor.technical.pm.log
+    }
+}
+
+orchid.technical.pm {
+    root * /srv/canary/sites/orchid.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/orchid.technical.pm.log
+    }
+}
+
+ridge.technical.pm {
+    root * /srv/canary/sites/ridge.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/ridge.technical.pm.log
+    }
+}
+
+grove.technical.pm {
+    root * /srv/canary/sites/grove.technical.pm
+    file_server
+    header X-Robots-Tag "noindex, nofollow, noarchive"
+    @card path /.well-known/mcp-server-card
+    header @card Content-Type application/json
+    @txt path *.txt
+    header @txt Content-Type "text/plain; charset=utf-8"
+    log {
+        output file /var/log/caddy/grove.technical.pm.log
+    }
+}

@@ -1,0 +1,101 @@
+host,card_tool,nearest_openapi_operation,token_overlap,auto_matched,truth,rater_A,rater_B,rater_C,unanimous
+mcp.sap.oobeprotocol.ai,sap_profile_list,,0,no,different,different,different,different,yes
+the-stall.intuitek.ai,bonds-brief,bonds-brief,1,yes,same,same,same,same,yes
+saascity.io,get_launch_directory,describeMcpServer,0.33,no,different,different,different,different,yes
+bird.com,esim_orders_cancel,cancelEsimOrder,1,yes,same,same,same,same,yes
+mcp.sap.oobeprotocol.ai,jupiter_universal_deposit_status,getPremiumWebhookStatus,0.25,no,different,different,different,different,yes
+scorecredit.fr,plan_action_financement,get_plan_financement_api_dossier__lead_id__plan_financement_get,0.33,no,same,same,same,same,yes
+pit.benys.dev,pit_resign,postV1MatchesIdResign,0.25,no,same,same,same,same,yes
+stocksonchain.io,list_events,listEvents,1,yes,same,same,same,same,yes
+fala.elav8.ai,get_knowledge_status,getHealth,0.33,no,different,different,different,different,yes
+api-mepmail.je4ndev.com,delete_broadcast,delete /broadcasts/{id},1,yes,same,same,same,same,yes
+www.immersivecommons.com,ic_admin_list_members,listUpcomingEvents,0.25,no,different,different,different,different,yes
+the-stall.intuitek.ai,domain-availability,domain-availability,1,yes,same,same,same,same,yes
+corbah-agents.corbah.workers.dev,commission_design,commissionDesign,1,yes,same,same,same,same,yes
+agent-exec.448c.org,watch_register,registerWatch,1,yes,same,same,same,same,yes
+www.ledgerbotje.nl,manufacturing_bom_version_create,uploadDocumentPost,0.25,no,different,different,different,different,yes
+bird.com,esim_offers_get,getEsimOffer,1,yes,same,same,same,same,yes
+youspot.com,draft_email_in_gmail,,0,no,different,different,different,different,yes
+www.ledgerbotje.nl,manufacturing_byproducts_search,,0,no,different,different,different,different,yes
+savordish.com,recipes.get,getRecipeBySlug,0.67,no,same,same,same,same,yes
+api.voidly.ai,get_global_heatmap,get /v1/sentinel/global_heatmap,0.75,no,same,same,same,same,yes
+api.casenode.ai,autocomplete,autocomplete_suggestions_autocomplete_get,0.33,no,same,same,same,same,yes
+labored-safari-islamic.ngrok-free.dev,chain_1155_balance,get /chain/1155-balance,0.75,no,same,same,same,same,yes
+singlefax.com,list_numbers,listNumbers,1,yes,same,same,same,same,yes
+api-mepmail.je4ndev.com,get_usage,get /usage,1,yes,same,same,same,same,yes
+emem.dev,emem_edges_recall,emem_edges_recall,1,yes,same,same,same,same,yes
+astranl.com,construction_natura,,0,no,different,different,different,different,yes
+xrpl-referee.onrender.com,get_xrp_price,get_xrp_price_xrp_price_get,1,yes,same,same,same,same,yes
+auditae.app,get_audit,getAudit,1,yes,same,same,same,same,yes
+the-stall.intuitek.ai,npm-trends,npm-trends,1,yes,same,same,same,same,yes
+mcp.frontdeskreview.com,compare_products,compareProducts,1,yes,same,same,same,same,yes
+www.seoforgpt.io,generate_content,generateContent,1,yes,same,same,same,same,yes
+mcp.packrift.com,get_shipping_estimate,getPackriftUcpShippingSuppliesStarterKit,0.29,no,different,different,different,different,yes
+answeringservicecare.com,get_pricing,getPricing,1,yes,same,same,same,same,yes
+singlefax.com,create_machine_fax,createMachineFax,1,yes,same,same,same,same,yes
+api.voidly.ai,get_category_leaders,get /v1/measurement/category-leaders,0.75,no,same,same,same,same,yes
+ratevert.com,compare_assets,compareAssets,1,yes,same,same,same,same,yes
+mcp.peppolstatus.com,list_host_incidents,list_host_incidents,1,yes,same,same,same,same,yes
+the-stall.intuitek.ai,polymarket-accuracy-score,polymarket-accuracy-score,1,yes,same,same,same,same,yes
+wcway.com,get_toilet,getToilet,1,yes,same,same,same,same,yes
+mcp.sap.oobeprotocol.ai,sap_memory_summarize,,0,no,different,different,different,different,yes
+apexfaucet.xyz,bulk_screener,x402_screener_bulk,0.67,no,same,same,same,same,yes
+bird.com,esim_deliveries_list,listEsimDeliveries,1,yes,same,same,same,same,yes
+clearlist.me,get_listings,getListings,1,yes,same,same,same,same,yes
+bird.com,realtime_apps_update,updateRealtimeApp,1,yes,same,same,same,same,yes
+mcp.comos-federation.com,dynamic,,0,no,different,different,different,different,yes
+plainrouter.com,launch.plans.validate,launch.plans.copy,0.67,no,different,different,different,different,yes
+jacobcampbellrealtor.com,search_site,getMlsSearchHub,0.25,no,different,unsure,different,different,no
+gkmex.com,list_cranes,listCranes,1,yes,same,same,same,same,yes
+labored-safari-islamic.ngrok-free.dev,chain_storage,get /chain/storage,0.67,no,same,same,same,same,yes
+agent-exec.448c.org,pay_requirements,payRequirements,1,yes,same,same,same,same,yes
+emem.dev,emem_at,emem_at_get,0.67,no,same,same,same,same,yes
+savordish.com,recipes.get_quick,getRecipeBySlug,0.67,no,different,different,different,different,yes
+laso.finance,delete_address_book_entry,deleteAddressBookEntry,1,yes,same,same,same,same,yes
+mcp.sap.oobeprotocol.ai,sap_open_vault_session,activatePremiumSession,0.25,no,different,different,different,different,yes
+swarmmemo.com,read_thread,get /api/thread/{message_id},1,yes,same,same,same,same,yes
+the-stall.intuitek.ai,labor-market,labor-market,1,yes,same,same,same,same,yes
+trydock.ai,delete_workspace,delete /api/workspaces/{slug},1,yes,same,same,same,same,yes
+mcp.peppolstatus.com,get_participant_stats_history,get_participant_stats_history,1,yes,same,same,same,same,yes
+clearvoyance.ai,analyze_campaign,analyzeCampaign,1,yes,same,same,same,same,yes
+www.extralingo.com,save_trip,saveTrip,1,yes,same,same,same,same,yes
+bird.com,email_broadcasts_counts,getEmailBroadcastCounts,0.75,no,same,same,same,same,yes
+youspot.com,top_message_correspondents,,0,no,different,different,different,different,yes
+trydock.ai,list_workspaces,get /api/workspaces,0.5,no,same,same,same,same,yes
+aaaa-nexus.atomadictech.workers.dev,forge_wire,getForgeLeaderboard,0.33,no,different,different,different,different,yes
+www.snowsure.ai,get_road_weather,getResorts,0.33,no,different,different,different,different,yes
+bird.com,email_ip_pools_create,createEmailMessage,0.5,no,different,different,different,different,yes
+bird.com,whatsapp_agents_list,listWhatsAppAgentNotifications,0.4,no,different,different,different,different,yes
+scvd.store,buy_small_pleasure,get_api_buy_small_blessing,0.5,no,unsure,different,unsure,unsure,no
+mcp.sap.oobeprotocol.ai,sap_chat_send_message,,0,no,different,different,different,different,yes
+jacobcampbellrealtor.com,get_county_market,getCountyMarket,1,yes,same,same,same,same,yes
+bird.com,sms_stats_by_category,getSMSStatsByCategory,0.75,no,same,same,same,same,yes
+emem.dev,emem_wave_solve,emem_wave_solve,1,yes,same,same,same,same,yes
+apexfaucet.xyz,fuci_on_arc,x402_arc_passport,0.33,no,unsure,unsure,unsure,unsure,yes
+botcorpus.com,search,,0,no,different,different,different,different,yes
+www.ledgerbotje.nl,financial_balance_get,getProtectedResourceMetadata,0.25,no,different,different,different,different,yes
+app.presify.io,list_scheduled_reports,,0,no,different,different,different,different,yes
+toofi.app,generate_treatment_plan_draft,generate_treatment_plan_draft,1,yes,same,same,same,same,yes
+mcp.sap.oobeprotocol.ai,gibwork_createBounty,,0,no,different,different,different,different,yes
+justautomate.ai,list_pages,listPages,1,yes,same,same,same,same,yes
+laso.finance,delete_payment_recipient,deletePaymentRecipient,1,yes,same,same,same,same,yes
+lodestone.studiocorsair.com,beeper_search,listConnectorCatalog,0.33,no,different,different,different,different,yes
+sapling.ai,sapling_safety,sapling_safety,1,yes,same,same,same,same,yes
+pydantic.dev,alert_delete,,0,no,different,different,different,different,yes
+mcp.sap.oobeprotocol.ai,sap_adrena_get_custody_info,fetchPremiumCatalog,0.2,no,different,different,different,different,yes
+auditae.app,check_brand_citation,checkCitation,0.67,no,same,same,same,same,yes
+bird.com,email_broadcasts_create,createEmailBroadcast,1,yes,same,same,same,same,yes
+api-mepmail.je4ndev.com,get_domain,get /domains,1,yes,same,same,same,same,yes
+apexfaucet.xyz,leads_email_pattern,x402_email_check,0.33,no,unsure,different,unsure,unsure,no
+forgecascade.org,search,,0,no,different,different,different,different,yes
+api.multi-upload-tool.com,list_accounts,listAccounts,1,yes,same,same,same,same,yes
+agent.maddegen.art,chain_tvl,chain_tvl,1,yes,same,same,same,same,yes
+kairossignal.com,get_network,get /v1/network/{symbol},1,yes,same,same,same,same,yes
+vaaya.ai,gtm_automation,,0,no,different,different,different,different,yes
+book.xonark.com,list_public_booking_services,list_public_booking_services,1,yes,same,same,same,same,yes
+bird.com,email_broadcasts_send,sendEmailBroadcast,1,yes,same,same,same,same,yes
+laso.finance,update_banking_destination,updateBankingDestination,1,yes,same,same,same,same,yes
+capability.network,get_dashboard,get_mcp,0.5,no,different,different,different,different,yes
+bird.com,whatsapp_agents_skills_get,getWhatsAppAgentNotification,0.4,no,different,different,different,different,yes
+clearvoyance.ai,close_campaign,closeCampaign,1,yes,same,same,same,same,yes
+www.adadiamonds.com,request_consultation,requestConsultation,1,yes,same,same,same,same,yes

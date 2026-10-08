@@ -7,3 +7,4 @@ hosts/webmcp-sample*
 release/data/
 *.bak
 .DS_Store
+canary/manifest.json

@@ -10,14 +10,6 @@ paths (SimHash soft-404 baseline), validates each artifact,
 fingerprints the hosting platform from the homepage, and runs endpoint/OAuth
 hygiene checks on any valid MCP/A2A card or protected-resource document.
 
-## Data
-
-Crawl results are published as gzipped JSONL with a datasheet and SHA-256 manifest in this Google Drive folder:
-
-https://drive.google.com/drive/folders/1jLDzuVje_Y-iQqP0YApaoULo0-PfpmhL
-
-Current release: `release-2026-10-07 (v0.6.0)` — Tranco list 647LX top 100K (three bands), the 5,000-host WebMCP subsample, the commerce (7,810 hosts) and fintech (4,050) vertical corpora, and the MCP-registry corpus (17,238 hosts), each crawled from one local vantage between 5 and 7 October 2026. Per-host security findings (`hygiene`) are withheld until coordinated disclosure completes (window closes 4 January 2027); see `release/DATASHEET.md`. A Zenodo DOI will replace the Drive link at publication.
-
 Node.js >= 20, TypeScript. Dependencies: `undici` (HTTP + proxy agent), `ajv`
 (JSON structural checks), `yaml` (OpenAPI YAML), `p-limit` (host concurrency),
 `tldts` (registrable domain), and since 0.4.0 `playwright-core` (headless
@@ -863,6 +855,90 @@ stratum says how much the fingerprint misses. The self-test covers the draw,
 the evidence extractor, the CSV round trip and the scorer; the fetch runs from
 the laptop.
 
+## Consistency pass (paper §4.4, Table 3) — 0.6.2
+
+```
+npm run consistency -- --in out/tranco-1-1k-local.jsonl out/tranco-1k-10k-local.jsonl out/tranco-10k-100k-local.jsonl out/commerce-local.jsonl out/fintech-local.jsonl out/registry-local.jsonl --dry-run
+npm run consistency -- --in <same files> --out out/consistency.jsonl --sample release/consistency-sample.csv
+#  ... hand-code the `truth` column of the sample (same / different / unsure) ...
+```
+
+Selects, from crawl results, every host with a valid MCP card (either path)
+**and** a valid OpenAPI document (*pair hosts*), and every host with a valid
+`llms.txt` and at least one of those (*coverage hosts*). The crawl does not
+keep bodies, so the artifacts are re-fetched (same UA and contact info, 1
+rps per host; needs `CRAWLER_CONTACT_URL` / `CRAWLER_CONTACT_EMAIL`). For a
+pair host, card tool names (`tools[]`, `capabilities.tools`, or per
+remote/server) are matched to OpenAPI operations (`operationId`, else method
++ path). A SEP-2127 card at the canonical path usually lists no tools; when
+the host also serves a legacy SEP-1649 card that does, that one is used and
+`card_used_alt` is set. Two keys: *strict* folds case and separators;
+*loose* also tokenizes camel/snake/kebab, sorts tokens, folds plurals and
+common verb synonyms (fetch/retrieve/read → get, search/find/query → list,
+create/add → post, update/modify/edit → put, remove → delete) and drops
+`api`, `v1`, `{params}` and stop words. Jaccard is over the key sets; the
+summary prints both, plus the share of card tools with no OpenAPI
+counterpart (pooled and per-host median), and the `llms.txt` coverage
+numbers (links to an OpenAPI document or a card; whether those links answer
+200). `--sample` writes a seeded 100-row sheet (half auto-matched, half not)
+of `(card tool, nearest operation)` pairs for the hand check the paper
+promises; `--dry-run` lists pair hosts and fetches nothing. Resumable
+(`--out` is append-only, done hosts are skipped). Self-test covers
+extraction, both keys, matching, link classification, selection, the host
+check with an injected fetcher, the summary and the sample sheet.
+
+## Canary experiment kit (paper §4.6 RQ3, Table 5) — 0.6.3
+
+```
+# cooperating (sub)domains, one per line
+CRAWLER_CONTACT_EMAIL=... CRAWLER_CONTACT_URL=... npm run canary:plan -- --domains hosts/canary-domains.txt --out canary
+#  -> canary/manifest.json (the key; never publish), canary/tasks.csv (5 prompts x domain), canary/trials.csv (empty sheet),
+#     canary/sites/<domain>/ (8 static files each; hand the folder to the domain owner, see deploy/canary-README.md)
+#  ... run the trials: one agent x domain x task at a time, note start/end UTC and paste the answer into trials.csv ...
+OPENAI_API_KEY=... ANTHROPIC_API_KEY=... GEMINI_API_KEY=... npm run canary:run -- --manifest canary/manifest.json --tasks canary/tasks.csv --out canary/trials.csv
+npm run canary:analyze -- --manifest canary/manifest.json --trials canary/trials.csv --logs canary/logs/*.log --out canary/results.json
+```
+
+`run` puts every prompt to the three agents through their vendor APIs with
+the vendors' own web tools enabled (OpenAI Responses `web_search`, Anthropic
+`web_search` + `web_fetch`, Gemini `google_search` + `url_context`), stamps
+start/end UTC, and appends the answer, the model id and the URLs the agent's
+own tool trace reports to `trials.csv`. Keys are read from the environment
+only. Trials on one domain run one after another with a 150 s gap (so log
+windows never overlap); domains run in parallel (5 by default); the run is
+resumable and errored rows are retried. Models default to the vendors'
+current general models; override with `OPENAI_MODEL` / `ANTHROPIC_MODEL` /
+`GEMINI_MODEL`. The tool-trace URLs give a second, log-independent fetch
+signal, reported beside the log-based one.
+
+`plan` shuffles the domains with a fixed seed and deals them round-robin into
+the 2×2 (artifacts linked from the homepage or not × canary present or
+absent), so a multiple of four gives balanced cells. Each canary domain gets
+four distinct nonsense tokens, one per artifact type (card tool name, OpenAPI
+`operationId`, A2A skill id, a "project codename" line in `llms.txt`), so an
+answer tells which file was read; control domains carry the same files with
+generic names. The homepage never contains a token; in linked cells it links
+the files (visible anchors and `<link rel=alternate>`), in unlinked cells it
+does not. `robots.txt` allows every fetcher (the agents' web tools do not all announce
+a distinct user agent, so a Disallow aimed at search crawlers could block the
+fetch we want to see); the page carries `noindex` and the hosting snippets
+send `X-Robots-Tag: noindex` on every response, which keeps the tokens out of
+web indexes. `plan` also writes a `Caddyfile` (one block per domain, TLS,
+header, per-domain log) for the self-hosted route. Prompts T1–T2 do not name any file (does the agent go looking?),
+T3–T5 name one (can it fetch and read it when told?); the `leading` column
+keeps them apart in the analysis.
+
+`analyze` reads nginx/Apache combined logs (host taken from the file name
+`<domain>.log`) or Caddy JSON logs, attributes artifact fetches to a trial
+when they fall inside its window ±60 s, flags answers that contain any of the
+domain's tokens (case- and separator-insensitive; control domains have none,
+so a match there is a false positive and is reported), and prints Table 5 per
+agent with domain-clustered bootstrap intervals, plus the breakdown by cell
+and by task. Trials on the same domain with overlapping windows cannot be
+separated in a log, so the tool warns about them: run one trial per domain at
+a time. Self-test covers the plan, the site files, robots, tasks, both log
+formats, scoring, the interval and the table.
+
 ## TODO
 
 - **WebMCP module follow-ups** (§4.2): a `webmcp:summarize` table; a
@@ -982,7 +1058,17 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
    HTTP crawl output is unchanged apart from the version string; results from
    0.3.2 need no re-crawl.
 
+## Changes in 0.6.3
+
+`src/canary/kit.ts` (`npm run canary:plan`, `canary:analyze`), `src/canary/run.ts` (`canary:run`, the API trial runner for three agents) and `deploy/canary-README.md` for cooperating hosts: the RQ3 canary experiment, see the section above; self-test 112 checks. No crawler changes.
+
+## Changes in 0.6.2
+
+`src/consistency.ts` (`npm run consistency`): the §4.4 card-vs-OpenAPI and `llms.txt` coverage pass, see the section above; self-test 107 checks. No crawler changes; `crawler_version` stays 0.6.1.
+
 ## Changes in 0.6.1
+
+0. **Second-vantage tooling**: `deploy/vantage.sh` (VM setup, tmux crawl of the three bands, status) and `src/vantage-compare.ts` (`npm run vantage:compare`), see `deploy/README.md`; self-test 102 checks.
 
 Fingerprint rules tightened after the precision sample (560 hosts, 20 per
 label, rated from evidence the rules do not use; `release/fingerprint-sample.blind.csv`,
