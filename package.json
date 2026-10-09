@@ -28,10 +28,15 @@
     "fp:draw": "tsx src/fingerprint-sample.ts draw",
     "fp:fetch": "tsx src/fingerprint-sample.ts fetch",
     "fp:score": "tsx src/fingerprint-sample.ts score",
+    "vantage:compare": "tsx src/vantage-compare.ts",
+    "consistency": "tsx src/consistency.ts",
     "crawl:registry": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/registry-latest.txt --out out/registry-local.jsonl --vantage local --concurrency 20 --rps-per-host 1 --progress",
     "crawl:commerce": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/commerce-latest.txt --out out/commerce-local.jsonl --vantage local --concurrency 20 --rps-per-host 1 --progress",
     "crawl:fintech": "UV_THREADPOOL_SIZE=64 tsx src/run.ts --hosts hosts/fintech-latest.txt --out out/fintech-local.jsonl --vantage local --concurrency 20 --rps-per-host 1 --progress",
     "handshake": "tsx src/handshake-run.ts",
+    "canary:plan": "tsx src/canary/kit.ts plan",
+    "canary:analyze": "tsx src/canary/kit.ts analyze",
+    "canary:run": "tsx src/canary/run.ts",
     "handshake:fixtures": "CRAWLER_FIXTURE_PORT=8787 tsx src/handshake-run.ts --in out/fixtures.jsonl --out out/handshake-fixtures.jsonl --scheme http --rps 50 --i-have-read-the-ethics-section",
     "disclosure": "tsx src/disclosure.ts"
   },
@@ -45,7 +50,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "tsx": "^4.19.2",
+    "tsx": "^4.23.15",
     "typescript": "^5.7.2"
   }
 }

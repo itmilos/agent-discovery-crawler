@@ -23,6 +23,10 @@ import { buildFindings, csvEscape, hygieneFindings, isShopifyHost, isShopifyIssu
 import { originTrialKind } from './webmcp-run.js';
 import { parseBand, parseBands, parseTrancoCsv, buildBands, readZip, csvFromZip, renderBandFile, writeCorpus } from './corpus/tranco.js';
 import { endpointHost, extractOfficial, officialNextCursor, pageOfficial, extractGlama, glamaNext, extractSmitheryDetail, dedupeHosts, writeRegistryCorpus, loadTrancoRanks, trancoRankFor } from './corpus/registry.js';
+import { compare as vCompare, renderCompare } from './vantage-compare.js';
+import { plan as cPlan, renderSite as cRenderSite, writePlan as cWritePlan, parseCsv as cParseCsv, parseLogLine as cParseLogLine, readTrials as cReadTrials, scoreTrials as cScoreTrials, tabulate as cTabulate, clusteredCI as cClusteredCI, renderTable as cRenderTable, overlappingWindows as cOverlapping, TRIALS_HEADER as cTRIALS_HEADER } from './canary/kit.js';
+import { parseOpenAI as rParseOpenAI, parseAnthropic as rParseAnthropic, parseGemini as rParseGemini, runTrials as rRunTrials, doneKeys as rDoneKeys, csvRow as rCsvRow, TRIALS_HEADER_V2 as rHEADER, upgradeTrialsHeader as rUpgradeHeader } from './canary/run.js';
+import { extractCardTools, extractOpenApiOps, parseStructured, strictKey, looseKey, looseKeyForOp, matchPair, jaccard, llmsLinks, selectCandidates, checkHost, summarize as cSummarize, renderSampleCsv, median } from './consistency.js';
 import { drawSample, extractEvidence, renderBlindCsv, parseCsv, score as fpScore, shuffle } from './fingerprint-sample.js';
 import { parseIntelItem, parseIntelBody, classify, makePacer, readLabels, labelHosts, writeRadarCorpus, LABEL_SOURCE, type RadarLabel } from './corpus/radar.js';
 import { mkdtempSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -731,6 +735,270 @@ await t('fp-sample: blind CSV has no predicted column and round-trips through th
   assert.ok(Math.abs(sc.accuracy - 0.6) < 1e-9);
   assert.ok(sc.kappa > 0 && sc.kappa < 1, String(sc.kappa));
   assert.deepEqual(sc.confusions.map((c) => c.host), ['c.example', 'e.example']);
+});
+
+// ---- 0.6.1: vantage comparison ----
+await t('vantage-compare: class matrix, one-vantage blocks, per-path agreement, union prevalence, geo-routing', () => {
+  const mk = (host: string, validPaths: string[], extra: Partial<HostResult> = {}, finalFor: Record<string, string> = {}): HostResult => ({
+    host, registrable_domain: host, vantage: 't', ts: '', crawler_version: CRAWLER_VERSION, duration_ms: 1,
+    blocked: { blocked: false, reason: null, counts: {} }, redirect_only: false,
+    fingerprint: { homepage_status: 200, homepage_final_url: null, server: null, powered_by: null, generator: null, platforms: [], primary: 'unknown', cdn: null, hints: [], signals: [] },
+    nx_baselines: [], mcp_card_path: null, probe_order: [], hygiene: [],
+    probes: PROBE_SPECS.map((s) => ({ ...mkProbe(s.path, validPaths.includes(s.path) ? 200 : 404), valid: validPaths.includes(s.path), final_url: finalFor[s.path] ?? `https://${host}${s.path}` })),
+    ...extra,
+  });
+  const blocked = (host: string): HostResult => mk(host, [], { blocked: { blocked: true, reason: 'challenge', counts: {} } });
+  const A = new Map<string, HostResult>([
+    ['x.test', mk('x.test', ['/llms.txt', '/openapi.json'])],
+    ['y.test', mk('y.test', ['/llms.txt'])],
+    ['z.test', blocked('z.test')],
+    ['w.test', mk('w.test', [])],
+    ['onlyA.test', mk('onlyA.test', ['/llms.txt'])],
+  ]);
+  const B = new Map<string, HostResult>([
+    ['x.test', mk('x.test', ['/llms.txt'], {}, { '/llms.txt': 'https://eu.x.test/llms.txt' })],
+    ['y.test', mk('y.test', ['/llms.txt', '/.well-known/security.txt'])],
+    ['z.test', mk('z.test', ['/llms.txt'])],
+    ['w.test', blocked('w.test')],
+    ['onlyB.test', mk('onlyB.test', [])],
+  ]);
+  const c = vCompare(A, B, 'local', 'eu');
+  assert.equal(c.common, 4); assert.equal(c.reachable_both, 2);
+  assert.equal(c.class_matrix.reachable.reachable, 2); assert.equal(c.class_matrix.blocked.reachable, 1); assert.equal(c.class_matrix.reachable.blocked, 1);
+  assert.deepEqual(c.blocked_one_vantage, { a_only: ['z.test'], b_only: ['w.test'] });
+  const llms = c.paths.find((p) => p.path === '/llms.txt')!; const oapi = c.paths.find((p) => p.path === '/openapi.json')!;
+  assert.deepEqual([llms.both_valid, llms.a_only, llms.b_only, llms.neither, llms.union_valid], [2, 0, 0, 0, 2]);
+  assert.deepEqual([oapi.both_valid, oapi.a_only, oapi.b_only, oapi.neither, oapi.agreement], [0, 1, 0, 1, 0.5]);
+  assert.deepEqual(c.any_artifact, { a: 2, b: 2, both: 2, union: 2, a_only_hosts: [], b_only_hosts: [] }); // security.txt alone does not count
+  assert.equal(c.cross_origin_disagreements, 1);
+  const txt = renderCompare(c);
+  assert.ok(txt.includes('reachable at both: 2') && txt.includes('/openapi.json') && txt.includes('geo-routing): 1'));
+});
+
+// ---- consistency pass (§4.4): tool extraction, name normalization, Jaccard, llms.txt coverage, selection, summary ----
+await t('consistency: card tools from SEP-1649 top-level, capabilities and per-remote lists; OpenAPI ops keyed by operationId else method+path', () => {
+  assert.deepEqual(extractCardTools({ tools: [{ name: 'search' }, { name: 'getUser' }, 'raw_name', { nope: 1 }] }), ['search', 'getUser', 'raw_name']);
+  assert.deepEqual(extractCardTools({ capabilities: { tools: [{ name: 'a' }] }, remotes: [{ url: 'x', tools: [{ name: 'b' }, { name: 'a' }] }] }), ['a', 'b']);
+  assert.deepEqual(extractCardTools({ name: 'sep-2127-card', remotes: [{ type: 'streamable-http', url: 'https://x/mcp' }] }), []);
+  assert.deepEqual(extractCardTools(null), []); assert.deepEqual(extractCardTools('str'), []);
+  const ops = extractOpenApiOps({ openapi: '3.1.0', paths: { '/users/{id}': { get: { operationId: 'getUser' }, delete: {} }, '/search': { post: { operationId: '  ' } }, '/x': 'bad' } });
+  assert.deepEqual(ops.map((o) => o.key), ['getUser', 'delete /users/{id}', 'post /search']);
+  assert.deepEqual(extractOpenApiOps({ paths: null }), []);
+  assert.equal(extractOpenApiOps(parseStructured('openapi: "3.0.3"\npaths:\n  /s:\n    get:\n      operationId: search\n', true))[0].key, 'search');
+  assert.equal(parseStructured('{bad', false), null);
+});
+await t('consistency: strict key folds case/separators; loose key folds order, plurals, verb synonyms, path params and filler', () => {
+  assert.equal(strictKey('listUsers'), strictKey('list_users')); assert.equal(strictKey('List-Users'), 'listusers');
+  assert.equal(looseKey('listUsers'), looseKey('users_list')); // order
+  assert.equal(looseKey('fetchUser'), looseKey('get_user')); // synonym
+  assert.equal(looseKey('getUsers'), looseKey('get user')); // plural
+  assert.equal(looseKeyForOp({ key: 'get /api/v1/users/{id}', operationId: null, method: 'get', path: '/api/v1/users/{id}' }), 'get user'); // params + filler dropped
+  assert.equal(looseKey('HTTPServerStatus'), 'http server status');
+  assert.notEqual(looseKey('createOrder'), looseKey('cancelOrder'));
+});
+await t('consistency: matchPair reports strict/loose matches, Jaccard over key sets, unmatched tools and nearest-operation candidates', () => {
+  const ops = extractOpenApiOps({ paths: { '/users': { get: { operationId: 'listUsers' }, post: { operationId: 'createUser' } }, '/users/{id}': { get: {} }, '/orders': { get: { operationId: 'listOrders' } } } });
+  const m = matchPair(['list_users', 'fetchUser', 'add_user', 'refund_order'], ops);
+  assert.equal(m.n_tools, 4); assert.equal(m.n_ops, 4);
+  assert.equal(m.matched_strict, 1); // list_users = listUsers
+  assert.equal(m.matched_loose, 3); // + fetchUser = get /users/{id}, add_user = createUser
+  assert.equal(m.jaccard_strict, 1 / 7); assert.equal(m.jaccard_loose, 3 / 5);
+  assert.deepEqual(m.unmatched_tools, ['refund_order']);
+  const c = m.candidates.find((x) => x.tool === 'refund_order')!;
+  assert.equal(c.matched, false); assert.equal(c.best_op, 'listOrders'); assert.ok(c.overlap > 0 && c.overlap < 1);
+  assert.equal(jaccard(new Set(), new Set()), null);
+  const e = matchPair([], ops); assert.equal(e.jaccard_loose, 0); assert.equal(e.n_tools, 0);
+});
+await t('consistency: llms.txt links classified as OpenAPI / card / other, relative links resolved against the file URL', () => {
+  const txt = '# Site\n\n- [API spec](/openapi.json)\n- [Docs](https://docs.x.test/intro.md)\n- [card](<https://x.test/.well-known/mcp/server-card.json> "t")\nSee https://x.test/swagger.yaml, and https://x.test/v2/openapi.\n';
+  const l = llmsLinks(txt, 'https://x.test/llms.txt');
+  assert.deepEqual(l.openapi, ['https://x.test/openapi.json', 'https://x.test/swagger.yaml', 'https://x.test/v2/openapi']);
+  assert.deepEqual(l.card, ['https://x.test/.well-known/mcp/server-card.json']);
+  assert.equal(l.total, 5);
+  assert.deepEqual(llmsLinks('no links here', 'https://x.test/llms.txt'), { openapi: [], card: [], total: 0 });
+});
+await t('consistency: candidate selection from crawl rows (pair = card + OpenAPI; coverage = llms.txt + either), checkHost with an injected fetcher, summary and sample sheet', async () => {
+  const mk = (host: string, validPaths: string[]): HostResult => ({
+    host, registrable_domain: host, vantage: 't', ts: '', crawler_version: CRAWLER_VERSION, duration_ms: 1,
+    blocked: { blocked: false, reason: null, counts: {} }, redirect_only: false,
+    fingerprint: { homepage_status: 200, homepage_final_url: null, server: null, powered_by: null, generator: null, platforms: [], primary: 'unknown', cdn: null, hints: [], signals: [] },
+    nx_baselines: [], mcp_card_path: null, probe_order: [], hygiene: [],
+    probes: PROBE_SPECS.map((s) => ({ ...mkProbe(s.path, validPaths.includes(s.path) ? 200 : 404), valid: validPaths.includes(s.path), final_url: `https://${host}${s.path}`, card_spec: s.path.includes('mcp/server-card') ? 'sep-1649' as const : undefined })),
+  });
+  assert.equal(selectCandidates(mk('none.test', ['/llms.txt']), 'f'), null);
+  assert.equal(selectCandidates(mk('oa.test', ['/openapi.json', '/.well-known/security.txt']), 'f'), null);
+  const p = selectCandidates(mk('pair.test', ['/.well-known/mcp/server-card.json', '/openapi.yaml', '/llms.txt']), 'f')!;
+  assert.deepEqual([p.pair, p.coverage, p.card_spec, p.openapi_artifact, p.llms_url], [true, true, 'sep-1649', 'openapi_yaml', 'https://pair.test/llms.txt']);
+  const cov = selectCandidates(mk('cov.test', ['/llms.txt', '/openapi.json']), 'f')!;
+  assert.deepEqual([cov.pair, cov.coverage, cov.card_url], [false, true, null]);
+  const two = selectCandidates(mk('two.test', ['/.well-known/mcp-server-card', '/.well-known/mcp/server-card.json', '/openapi.json']), 'f')!;
+  assert.deepEqual([two.card_url, two.card_alt_urls], ['https://two.test/.well-known/mcp-server-card', ['https://two.test/.well-known/mcp/server-card.json']]);
+  const bodies: Record<string, [number, string]> = {
+    'https://pair.test/.well-known/mcp/server-card.json': [200, JSON.stringify({ name: 'c', tools: [{ name: 'search' }, { name: 'getItem' }, { name: 'deleteItem' }] })],
+    'https://pair.test/openapi.yaml': [200, 'openapi: "3.0.3"\npaths:\n  /search:\n    get:\n      operationId: search\n  /items/{id}:\n    get:\n      operationId: fetchItem\n'],
+    'https://pair.test/llms.txt': [200, '# P\n\n- [spec](/openapi.yaml)\n- [gone](/.well-known/agent-card.json)\n'],
+    'https://pair.test/.well-known/agent-card.json': [404, ''],
+    'https://cov.test/llms.txt': [200, '# C\n\n- [docs](/docs)\n'],
+    'https://two.test/.well-known/mcp-server-card': [200, JSON.stringify({ name: 'sep2127', remotes: [{ url: 'https://two.test/mcp' }] })],
+    'https://two.test/.well-known/mcp/server-card.json': [200, JSON.stringify({ name: 'legacy', tools: [{ name: 'ping' }] })],
+    'https://two.test/openapi.json': [200, JSON.stringify({ paths: { '/ping': { get: { operationId: 'ping' } } } })],
+  };
+  const fetch = async (url: string): Promise<FetchResult> => { const [status, body] = bodies[url] ?? [0, '']; return { ...fr(status, body, 'text/plain'), url, finalUrl: url, ...(status === 0 ? { error: 'dns' } : {}) }; };
+  const r1 = await checkHost(p, { timeoutMs: 1, fetch });
+  assert.deepEqual([r1.fetch.card, r1.fetch.openapi, r1.fetch.llms, r1.fetch.errors], [200, 200, 200, []]);
+  assert.equal(r1.card_lists_no_tools, false);
+  assert.deepEqual([r1.match!.n_tools, r1.match!.n_ops, r1.match!.matched_strict, r1.match!.matched_loose], [3, 2, 1, 2]);
+  assert.equal(r1.match!.jaccard_loose, 2 / 3); assert.deepEqual(r1.match!.unmatched_tools, ['deleteItem']);
+  assert.deepEqual([r1.llms!.openapi, r1.llms!.card, r1.llms!.openapi_resolves, r1.llms!.card_resolves], [['https://pair.test/openapi.yaml'], ['https://pair.test/.well-known/agent-card.json'], [true], [false]]);
+  const r3 = await checkHost(two, { timeoutMs: 1, fetch });
+  assert.deepEqual([r3.card_used_alt, r3.card_url, r3.card_spec, r3.card_lists_no_tools, r3.match!.jaccard_loose], [true, 'https://two.test/.well-known/mcp/server-card.json', 'sep-1649', false, 1]);
+  const r2 = await checkHost(cov, { timeoutMs: 1, fetch });
+  assert.equal(r2.match, null); assert.deepEqual([r2.llms!.openapi, r2.llms!.card, r2.llms!.total], [[], [], 1]);
+  const s = cSummarize([r1, r2]);
+  assert.ok(s.includes('pair hosts (valid card + valid OpenAPI in crawl): 1; both re-fetched and parsed: 1'), s);
+  assert.ok(s.includes('median Jaccard, loose: 0.67; strict: 0.25'), s);
+  assert.ok(s.includes('card tools with no OpenAPI counterpart (loose): 1 of 3 pooled (33.3%)'), s);
+  assert.ok(s.includes('coverage hosts (valid llms.txt + card or OpenAPI): 2; llms.txt re-fetched: 2; link to OpenAPI: 1; link to a card: 1; link to either: 1 (50.0%); of those, at least one such link resolves (200): 1 (100.0%)'), s);
+  const csv = renderSampleCsv([r1, r2], 10);
+  const lines = csv.trim().split('\n');
+  assert.equal(lines[0], 'host,card_tool,nearest_openapi_operation,token_overlap,auto_matched,truth');
+  assert.equal(lines.length, 4); // 3 tools, all drawn
+  assert.ok(lines.some((l) => l.startsWith('pair.test,deleteItem,fetchItem,') && l.endsWith(',no,')));
+  assert.equal(median([3, 1, 2]), 2); assert.equal(median([1, 2, 3, 4]), 2.5); assert.equal(median([]), null);
+});
+
+// ---- canary kit (§4.6 RQ3): plan, site files, robots, tasks, log parsing, scoring, clustered CI, table ----
+await t('canary: plan is deterministic, balanced over the 2x2, tokens unique and only on canary domains', () => {
+  const doms = Array.from({ length: 20 }, (_, i) => `c${i}.example`);
+  const m1 = cPlan(doms, 7), m2 = cPlan(doms, 7), m3 = cPlan(doms, 8);
+  assert.deepEqual(m1.domains, m2.domains); assert.notDeepEqual(m1.domains.map((d) => d.domain), m3.domains.map((d) => d.domain)); // seed changes the shuffle, hence which domain lands in which cell
+  const cells: Record<string, number> = {}; for (const d of m1.domains) cells[d.cell_label] = (cells[d.cell_label] ?? 0) + 1;
+  assert.deepEqual(cells, { 'linked/canary': 5, 'unlinked/canary': 5, 'linked/control': 5, 'unlinked/control': 5 });
+  const toks = m1.domains.flatMap((d) => (d.tokens ? Object.values(d.tokens) : []));
+  assert.equal(toks.length, 40); assert.equal(new Set(toks).size, 40);
+  assert.ok(m1.domains.filter((d) => !d.cell.canary).every((d) => d.tokens === null));
+  assert.ok(toks.every((x) => /^[a-z]+([ _-][a-z]+|[A-Z][a-z]+)$/.test(x)), toks.join(','));
+  assert.equal(cPlan(['A.example', 'a.example', '', ' b.example '], 1).domains.length, 2); // dedupe + trim
+});
+await t('canary: site files carry the tokens only on canary domains, links only in linked cells, robots blocks search bots and allows agent bots', () => {
+  const m = cPlan(['one.example', 'two.example', 'three.example', 'four.example'], 3);
+  const contact = { email: 'x@y.test', url: 'https://y.test/study' };
+  for (const d of m.domains) {
+    const f = cRenderSite(d, contact);
+    assert.deepEqual(Object.keys(f).sort(), ['.well-known/agent-card.json', '.well-known/mcp-server-card', '.well-known/mcp/server-card.json', '.well-known/security.txt', 'index.html', 'llms.txt', 'openapi.json', 'robots.txt']);
+    const all = Object.values(f).join('\n');
+    if (d.tokens) {
+      assert.ok(JSON.parse(f['.well-known/mcp-server-card']).tools[0].name === d.tokens.card);
+      assert.ok(JSON.parse(f['.well-known/mcp/server-card.json']).tools[0].name === d.tokens.card);
+      assert.ok(JSON.parse(f['openapi.json']).paths['/search'].get.operationId === d.tokens.openapi);
+      assert.ok(JSON.parse(f['.well-known/agent-card.json']).skills[0].id === d.tokens.a2a);
+      assert.ok(f['llms.txt'].includes(`codename: **${d.tokens.llms}**`));
+      assert.ok(!f['index.html'].includes(d.tokens.card) && !f['index.html'].includes(d.tokens.llms)); // never on the HTML page
+    } else {
+      assert.ok(!/codename/.test(f['llms.txt']) && all.includes('search_pages'));
+    }
+    assert.equal(f['index.html'].includes('href="/llms.txt"'), d.cell.linked);
+    assert.equal(f['index.html'].includes('rel="alternate"'), d.cell.linked);
+    assert.ok(f['index.html'].includes('noindex') && f['index.html'].includes('x@y.test'));
+    assert.ok(/User-agent: \*\nAllow: \//.test(f['robots.txt']) && !/Disallow/.test(f['robots.txt']) && f['robots.txt'].includes('noindex'));
+    assert.ok(f['.well-known/security.txt'].startsWith('Contact: mailto:x@y.test'));
+  }
+  const dir = mkdtempSync(join(tmpdir(), 'canary-'));
+  const written = cWritePlan(m, dir, contact);
+  assert.ok(existsSync(join(dir, 'manifest.json')) && existsSync(join(dir, 'tasks.csv')) && existsSync(join(dir, 'trials.csv')) && existsSync(join(dir, 'sites', 'one.example', '.well-known', 'mcp-server-card')));
+  assert.equal(written.length, 4 + 4 * 8);
+  const caddy = readFileSync(join(dir, 'Caddyfile'), 'utf8');
+  assert.ok(caddy.includes('one.example {') && caddy.includes('X-Robots-Tag') && caddy.includes('/var/log/caddy/one.example.log') && caddy.split('file_server').length === 5);
+  const tasks = cParseCsv(readFileSync(join(dir, 'tasks.csv'), 'utf8'));
+  assert.equal(tasks.length, 20); assert.deepEqual([...new Set(tasks.map((r) => r.task_id))], ['T1', 'T2', 'T3', 'T4', 'T5']);
+  assert.equal(tasks.filter((r) => r.leading === 'no').length, 8);
+  assert.ok(tasks.every((r) => r.prompt.includes(r.domain)));
+  assert.equal(readFileSync(join(dir, 'trials.csv'), 'utf8').trim(), cTRIALS_HEADER); // plan pre-creates trials.csv; its header must be the one the runner's rows and doneKeys/readTrials assume
+});
+await t('canary: combined and Caddy log lines parse with UTC timestamps; unreadable lines are skipped', () => {
+  const h = cParseLogLine('203.0.113.9 - - [08/Oct/2026:14:02:11 +0200] "GET /.well-known/mcp-server-card?x=1 HTTP/1.1" 200 512 "-" "ChatGPT-User/1.0"', 'one.example')!;
+  assert.deepEqual([h.host, h.path, h.status, h.ua, new Date(h.ts).toISOString()], ['one.example', '/.well-known/mcp-server-card', 200, 'ChatGPT-User/1.0', '2026-10-08T12:02:11.000Z']);
+  const c = cParseLogLine(JSON.stringify({ ts: 1791036131.5, request: { host: 'Two.example:443', uri: '/llms.txt', headers: { 'User-Agent': ['ClaudeBot/1.0'] } }, status: 200 }), null)!;
+  assert.deepEqual([c.host, c.path, c.status, c.ua, c.ts], ['two.example', '/llms.txt', 200, 'ClaudeBot/1.0', 1791036131500]);
+  assert.equal(cParseLogLine('garbage', 'x'), null); assert.equal(cParseLogLine('', 'x'), null); assert.equal(cParseLogLine('{"nope":1}', 'x'), null);
+  const neg = cParseLogLine('1.1.1.1 - - [08/Oct/2026:14:02:11 -0500] "HEAD /openapi.json HTTP/2.0" 304 0', 'h.example')!;
+  assert.equal(new Date(neg.ts).toISOString(), '2026-10-08T19:02:11.000Z'); assert.equal(neg.ua, '');
+});
+await t('canary: trials scored against log windows, canary detection is separator-insensitive, controls never match, per-agent table with clustered CIs', () => {
+  const m = cPlan(['a.example', 'b.example', 'c.example', 'd.example'], 11);
+  const can = m.domains.find((d) => d.cell_label === 'linked/canary')!, ctl = m.domains.find((d) => d.cell_label === 'linked/control')!;
+  const t0 = Date.parse('2026-10-09T10:00:00Z');
+  const iso = (ms: number) => new Date(ms).toISOString();
+  const trials = cReadTrials([cTRIALS_HEADER,
+    `agentX,${can.domain},T3,${iso(t0)},${iso(t0 + 120_000)},"The tool is called ${can.tokens!.card.replace('_', ' ').toUpperCase()}.",m1,https://${can.domain}/.well-known/mcp-server-card https://other.example/x,`,
+    `agentX,${ctl.domain},T3,${iso(t0 + 600_000)},${iso(t0 + 700_000)},"It lists search_pages."`,
+    `agentY,${can.domain},T2,${iso(t0 + 1_200_000)},${iso(t0 + 1_260_000)},"I could not find a codename."`,
+    `agentY,${ctl.domain},T2,${iso(t0)},${iso(t0 + 60_000)},"${can.tokens!.llms}"`,
+  ].join('\n'));
+  assert.equal(trials.length, 4); assert.deepEqual(trials[0].reported_urls.length, 2); assert.deepEqual(trials[1].reported_urls, []);
+  const hits = [
+    { host: can.domain, ts: t0 + 30_000, path: '/.well-known/mcp-server-card', ua: 'X', status: 200 },
+    { host: can.domain, ts: t0 + 30_000, path: '/', ua: 'X', status: 200 },
+    { host: can.domain, ts: t0 - 3_600_000, path: '/llms.txt', ua: 'other', status: 200 }, // outside every window
+    { host: null, ts: t0 + 650_000, path: '/llms.txt', ua: 'X', status: 200 }, // host unknown (combined log without vhost): attributed by time only
+  ];
+  assert.equal(cOverlapping(trials).length, 0);
+  assert.equal(cOverlapping([trials[0], { ...trials[0], agent: 'agentZ', start: t0 + 150_000, end: t0 + 200_000 }]).length, 1); // within 60s slack of each other
+  const R = cScoreTrials(m, trials, hits);
+  assert.deepEqual([R[0].fetched.card, R[0].fetched.llms, R[0].fetched_any, R[0].reported_artifact, R[0].canary_in_answer], [true, false, true, true, ['card']]);
+  assert.equal(R[1].reported_artifact, false);
+  assert.deepEqual([R[1].fetched.llms, R[1].fetched_any, R[1].canary_in_answer], [true, true, []]);
+  assert.deepEqual([R[2].fetched_any, R[2].canary_in_answer], [false, []]);
+  assert.deepEqual(R[3].canary_in_answer, []); // control domain has no tokens, even if the text happens to contain another domain's token
+  const rows = cTabulate(R);
+  const x = rows.find((r) => r.agent === 'agentX')!, y = rows.find((r) => r.agent === 'agentY')!;
+  assert.deepEqual([x.n, x.fetched_card, x.fetched_llms, x.fetched_any, x.reported_artifact, x.canary, x.false_positive_controls, x.errors], [2, 1, 1, 2, 1, 1, 0, 0]);
+  assert.deepEqual([y.n, y.fetched_any, y.canary], [2, 0, 0]);
+  assert.deepEqual(x.by_cell['linked/canary'], { n: 1, fetched_any: 1, canary: 1 });
+  const ci = cClusteredCI([{ domain: 'a', v: true }, { domain: 'a', v: true }, { domain: 'b', v: false }, { domain: 'b', v: false }, { domain: 'c', v: true }, { domain: 'c', v: false }]);
+  assert.ok(ci && ci[0] >= 0 && ci[1] <= 1 && ci[0] <= 0.5 && ci[1] >= 0.5, String(ci));
+  assert.equal(cClusteredCI([{ domain: 'a', v: true }]), null);
+  const txt = cRenderTable(rows);
+  assert.ok(txt.includes('agentX') && txt.includes('linked/canary') && txt.includes('T3') && txt.includes('100%'), txt);
+});
+
+await t('canary runner: vendor response parsers pull answer text and opened URLs; trial loop serializes per domain, resumes, records errors', async () => {
+  const oa = rParseOpenAI({ output: [{ type: 'web_search_call', action: { type: 'open_page', url: 'https://a.example/llms.txt' } }, { type: 'web_search_call', action: { type: 'search', query: 'x' } }, { type: 'message', content: [{ type: 'output_text', text: 'Hello' }] }] });
+  assert.deepEqual(oa, { answer: 'Hello', urls: ['https://a.example/llms.txt'] });
+  const an = rParseAnthropic({ content: [{ type: 'server_tool_use', name: 'web_fetch', input: { url: 'https://a.example/openapi.json' } }, { type: 'web_fetch_tool_result', content: { type: 'web_fetch_result', url: 'https://a.example/openapi.json' } }, { type: 'web_search_tool_result', content: [{ type: 'web_search_result', url: 'https://s.example/r' }] }, { type: 'text', text: 'A' }, { type: 'text', text: 'B' }] });
+  assert.deepEqual(an, { answer: 'A\nB', urls: ['https://a.example/openapi.json', 'https://s.example/r'] });
+  const ge = rParseGemini({ candidates: [{ content: { parts: [{ text: 'G' }, { text: '!' }] }, url_context_metadata: { url_metadata: [{ retrieved_url: 'https://a.example/.well-known/agent-card.json' }] }, groundingMetadata: { groundingChunks: [{ web: { uri: 'https://g.example/' } }] } }] });
+  assert.deepEqual(ge, { answer: 'G!', urls: ['https://a.example/.well-known/agent-card.json', 'https://g.example/'] });
+  assert.deepEqual(rParseGemini({}), { answer: '', urls: [] });
+  const dir = mkdtempSync(join(tmpdir(), 'canary-run-')); const out = join(dir, 'trials.csv');
+  writeFileSync(out, rHEADER + '\n');
+  const tasks = [{ domain: 'a.example', task_id: 'T1', prompt: 'p1' }, { domain: 'a.example', task_id: 'T2', prompt: 'p2' }, { domain: 'b.example', task_id: 'T1', prompt: 'p1' }];
+  const calls: string[] = []; let clock = 1_000_000;
+  const fake = { openai: async (p: string) => { calls.push('openai:' + p); return { answer: 'ok ' + p, reportedUrls: ['https://a.example/llms.txt'], model: 'm' }; }, anthropic: async (p: string) => { calls.push('anthropic:' + p); if (p === 'p2') throw new Error('HTTP 429: slow down'); return { answer: 'fine', reportedUrls: [], model: 'c' }; }, gemini: async () => ({ answer: '', reportedUrls: [], model: 'g' }) };
+  const n = await rRunTrials(tasks, out, rDoneKeys(readFileSync(out, 'utf8')), { agents: ['openai', 'anthropic'], gapMs: 5, parallelDomains: 2, timeoutMs: 1, limit: null, dryRun: false, ask: fake as never, now: () => (clock += 1000), sleep: async () => {} }, () => {});
+  assert.equal(n, 6);
+  const rows = cParseCsv(readFileSync(out, 'utf8'));
+  assert.equal(rows.length, 6);
+  const err = rows.find((r) => r.agent === 'anthropic' && r.task_id === 'T2')!;
+  assert.ok(err.error.startsWith('HTTP 429') && err.answer === '');
+  assert.equal(rows.find((r) => r.agent === 'openai' && r.task_id === 'T1')!.reported_urls, 'https://a.example/llms.txt');
+  assert.ok(rows.every((r) => Date.parse(r.end_utc) > Date.parse(r.start_utc)));
+  // per-domain order is task-major, agent-minor; a.example T1 both agents precede a.example T2
+  const aCalls = calls.filter((c) => c.endsWith('p1') || c.endsWith('p2'));
+  assert.ok(aCalls.indexOf('openai:p2') > aCalls.indexOf('anthropic:p1'));
+  // resume: the errored row is retried, the five good ones are not
+  const done = rDoneKeys(readFileSync(out, 'utf8')); assert.equal(done.size, 5);
+  const n2 = await rRunTrials(tasks, out, done, { agents: ['openai', 'anthropic'], gapMs: 0, parallelDomains: 1, timeoutMs: 1, limit: null, dryRun: true, ask: fake as never, sleep: async () => {} }, () => {});
+  assert.equal(n2, 0);
+  assert.equal(rCsvRow(['a', 'b "q"', 'c,d']), 'a,"b ""q""","c,d"\n');
+  // a trials.csv pre-created by an older plan has a six-column header; without the upgrade the error cell is invisible and the errored row would be skipped on resume
+  const oldText = 'agent,domain,task_id,start_utc,end_utc,answer\n' + rCsvRow(['openai', 'a.example', 'T1', 's', 'e', '', 'm', '', 'HTTP 429: no credits']) + rCsvRow(['openai', 'a.example', 'T2', 's', 'e', 'fine', 'm', 'https://a.example/llms.txt', '']);
+  assert.equal(rDoneKeys(oldText).size, 2);
+  const upText = rUpgradeHeader(oldText);
+  assert.ok(upText.startsWith(rHEADER + '\n') && upText.split('\n').length === oldText.split('\n').length);
+  assert.equal(rDoneKeys(upText).size, 1);
+  assert.equal(rUpgradeHeader(upText), upText);
+  assert.equal(cReadTrials(upText)[1].reported_urls[0], 'https://a.example/llms.txt');
 });
 
 // ---- HTTP layer: content decoding, 303, timeout, shared limiter (loopback server) ----
