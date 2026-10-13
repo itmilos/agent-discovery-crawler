@@ -8,3 +8,9 @@ release/data/
 *.bak
 .DS_Store
 canary/manifest.json
+
+# measurement results (kept in Drive, not in git)
+canary/results.json
+canary/trials.csv
+canary/analyze.txt
+out-eu/
