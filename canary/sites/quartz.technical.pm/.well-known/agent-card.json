@@ -1,0 +1,25 @@
+{
+  "name": "quartz.technical.pm notes agent",
+  "description": "Answers questions about the public pages of this site.",
+  "url": "https://quartz.technical.pm/a2a",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false
+  },
+  "defaultInputModes": [
+    "text/plain"
+  ],
+  "defaultOutputModes": [
+    "text/plain"
+  ],
+  "skills": [
+    {
+      "id": "fimesiv-lerunad",
+      "name": "fimesiv-lerunad",
+      "description": "Search the public pages of this site.",
+      "tags": [
+        "search"
+      ]
+    }
+  ]
+}

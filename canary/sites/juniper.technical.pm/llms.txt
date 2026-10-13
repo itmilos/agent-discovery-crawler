@@ -1,0 +1,8 @@
+# juniper.technical.pm
+
+> Developer notes for juniper.technical.pm, a small example service used in a web-measurement study of agent discovery files.
+
+## Docs
+- [API description (OpenAPI)](https://juniper.technical.pm/openapi.json)
+- [MCP server card](https://juniper.technical.pm/.well-known/mcp-server-card)
+- [Agent card](https://juniper.technical.pm/.well-known/agent-card.json)

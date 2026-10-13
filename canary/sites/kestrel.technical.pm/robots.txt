@@ -1,0 +1,6 @@
+# Canary site for a web-measurement study of agent discovery files. Fetching is welcome;
+# every response carries X-Robots-Tag: noindex so nothing here enters a web index.
+# Contact: see /.well-known/security.txt
+
+User-agent: *
+Allow: /

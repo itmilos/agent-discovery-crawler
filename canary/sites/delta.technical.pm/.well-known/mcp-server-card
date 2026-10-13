@@ -1,0 +1,28 @@
+{
+  "name": "delta.notes",
+  "version": "1.0.0",
+  "description": "Read-only page search for delta.technical.pm.",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://delta.technical.pm/mcp"
+    }
+  ],
+  "tools": [
+    {
+      "name": "rupozo_sitakep",
+      "description": "Search the public pages of this site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ]
+}

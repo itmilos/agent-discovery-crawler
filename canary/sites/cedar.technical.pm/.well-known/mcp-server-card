@@ -1,0 +1,28 @@
+{
+  "name": "cedar.notes",
+  "version": "1.0.0",
+  "description": "Read-only page search for cedar.technical.pm.",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://cedar.technical.pm/mcp"
+    }
+  ],
+  "tools": [
+    {
+      "name": "search_pages",
+      "description": "Search the public pages of this site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ]
+}

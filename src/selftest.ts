@@ -24,8 +24,9 @@ import { originTrialKind } from './webmcp-run.js';
 import { parseBand, parseBands, parseTrancoCsv, buildBands, readZip, csvFromZip, renderBandFile, writeCorpus } from './corpus/tranco.js';
 import { endpointHost, extractOfficial, officialNextCursor, pageOfficial, extractGlama, glamaNext, extractSmitheryDetail, dedupeHosts, writeRegistryCorpus, loadTrancoRanks, trancoRankFor } from './corpus/registry.js';
 import { compare as vCompare, renderCompare } from './vantage-compare.js';
-import { plan as cPlan, renderSite as cRenderSite, writePlan as cWritePlan, parseCsv as cParseCsv, parseLogLine as cParseLogLine, readTrials as cReadTrials, scoreTrials as cScoreTrials, tabulate as cTabulate, clusteredCI as cClusteredCI, renderTable as cRenderTable, overlappingWindows as cOverlapping, TRIALS_HEADER as cTRIALS_HEADER } from './canary/kit.js';
-import { parseOpenAI as rParseOpenAI, parseAnthropic as rParseAnthropic, parseGemini as rParseGemini, runTrials as rRunTrials, doneKeys as rDoneKeys, csvRow as rCsvRow, TRIALS_HEADER_V2 as rHEADER, upgradeTrialsHeader as rUpgradeHeader } from './canary/run.js';
+import { plan as cPlan, renderSite as cRenderSite, writePlan as cWritePlan, parseCsv as cParseCsv, parseLogLine as cParseLogLine, readTrials as cReadTrials, scoreTrials as cScoreTrials, tabulate as cTabulate, clusteredCI as cClusteredCI, renderTable as cRenderTable, overlappingWindows as cOverlapping, hitContext as cHitContext, TRIALS_HEADER as cTRIALS_HEADER } from './canary/kit.js';
+import { parseOpenAI as rParseOpenAI, parseAnthropic as rParseAnthropic, parseGemini as rParseGemini, runTrials as rRunTrials, doneKeys as rDoneKeys, csvRow as rCsvRow, TRIALS_HEADER_V2 as rHEADER } from './canary/run.js';
+import { profileA2A, selectA2A, checkA2A, summarizeA2A } from './a2a-profile.js';
 import { extractCardTools, extractOpenApiOps, parseStructured, strictKey, looseKey, looseKeyForOp, matchPair, jaccard, llmsLinks, selectCandidates, checkHost, summarize as cSummarize, renderSampleCsv, median } from './consistency.js';
 import { drawSample, extractEvidence, renderBlindCsv, parseCsv, score as fpScore, shuffle } from './fingerprint-sample.js';
 import { parseIntelItem, parseIntelBody, classify, makePacer, readLabels, labelHosts, writeRadarCorpus, LABEL_SOURCE, type RadarLabel } from './corpus/radar.js';
@@ -913,7 +914,7 @@ await t('canary: site files carry the tokens only on canary domains, links only 
   assert.equal(tasks.length, 20); assert.deepEqual([...new Set(tasks.map((r) => r.task_id))], ['T1', 'T2', 'T3', 'T4', 'T5']);
   assert.equal(tasks.filter((r) => r.leading === 'no').length, 8);
   assert.ok(tasks.every((r) => r.prompt.includes(r.domain)));
-  assert.equal(readFileSync(join(dir, 'trials.csv'), 'utf8').trim(), cTRIALS_HEADER); // plan pre-creates trials.csv; its header must be the one the runner's rows and doneKeys/readTrials assume
+  assert.equal(readFileSync(join(dir, 'trials.csv'), 'utf8').trim(), 'agent,domain,task_id,start_utc,end_utc,answer');
 });
 await t('canary: combined and Caddy log lines parse with UTC timestamps; unreadable lines are skipped', () => {
   const h = cParseLogLine('203.0.113.9 - - [08/Oct/2026:14:02:11 +0200] "GET /.well-known/mcp-server-card?x=1 HTTP/1.1" 200 512 "-" "ChatGPT-User/1.0"', 'one.example')!;
@@ -929,13 +930,14 @@ await t('canary: trials scored against log windows, canary detection is separato
   const can = m.domains.find((d) => d.cell_label === 'linked/canary')!, ctl = m.domains.find((d) => d.cell_label === 'linked/control')!;
   const t0 = Date.parse('2026-10-09T10:00:00Z');
   const iso = (ms: number) => new Date(ms).toISOString();
-  const trials = cReadTrials([cTRIALS_HEADER,
+  const trials = cReadTrials([cTRIALS_HEADER + ',model,reported_urls,error',
     `agentX,${can.domain},T3,${iso(t0)},${iso(t0 + 120_000)},"The tool is called ${can.tokens!.card.replace('_', ' ').toUpperCase()}.",m1,https://${can.domain}/.well-known/mcp-server-card https://other.example/x,`,
     `agentX,${ctl.domain},T3,${iso(t0 + 600_000)},${iso(t0 + 700_000)},"It lists search_pages."`,
     `agentY,${can.domain},T2,${iso(t0 + 1_200_000)},${iso(t0 + 1_260_000)},"I could not find a codename."`,
     `agentY,${ctl.domain},T2,${iso(t0)},${iso(t0 + 60_000)},"${can.tokens!.llms}"`,
+    `agentY,${can.domain},T3,${iso(t0 + 2_000_000)},${iso(t0 + 2_060_000)},,g,,HTTP 429: quota`,
   ].join('\n'));
-  assert.equal(trials.length, 4); assert.deepEqual(trials[0].reported_urls.length, 2); assert.deepEqual(trials[1].reported_urls, []);
+  assert.equal(trials.length, 5); assert.equal(trials[4].error, 'HTTP 429: quota'); assert.deepEqual(trials[0].reported_urls.length, 2); assert.deepEqual(trials[1].reported_urls, []);
   const hits = [
     { host: can.domain, ts: t0 + 30_000, path: '/.well-known/mcp-server-card', ua: 'X', status: 200 },
     { host: can.domain, ts: t0 + 30_000, path: '/', ua: 'X', status: 200 },
@@ -953,7 +955,9 @@ await t('canary: trials scored against log windows, canary detection is separato
   const rows = cTabulate(R);
   const x = rows.find((r) => r.agent === 'agentX')!, y = rows.find((r) => r.agent === 'agentY')!;
   assert.deepEqual([x.n, x.fetched_card, x.fetched_llms, x.fetched_any, x.reported_artifact, x.canary, x.false_positive_controls, x.errors], [2, 1, 1, 2, 1, 1, 0, 0]);
-  assert.deepEqual([y.n, y.fetched_any, y.canary], [2, 0, 0]);
+  assert.deepEqual([y.n, y.errors, y.fetched_any, y.canary], [2, 1, 0, 0]); // the errored row is not a trial
+  const ctx = cHitContext(trials, hits);
+  assert.deepEqual([ctx.background, ctx.background_ua, Object.keys(ctx.in_window_ua)], [1, { other: 1 }, ['X']]);
   assert.deepEqual(x.by_cell['linked/canary'], { n: 1, fetched_any: 1, canary: 1 });
   const ci = cClusteredCI([{ domain: 'a', v: true }, { domain: 'a', v: true }, { domain: 'b', v: false }, { domain: 'b', v: false }, { domain: 'c', v: true }, { domain: 'c', v: false }]);
   assert.ok(ci && ci[0] >= 0 && ci[1] <= 1 && ci[0] <= 0.5 && ci[1] >= 0.5, String(ci));
@@ -991,14 +995,51 @@ await t('canary runner: vendor response parsers pull answer text and opened URLs
   const n2 = await rRunTrials(tasks, out, done, { agents: ['openai', 'anthropic'], gapMs: 0, parallelDomains: 1, timeoutMs: 1, limit: null, dryRun: true, ask: fake as never, sleep: async () => {} }, () => {});
   assert.equal(n2, 0);
   assert.equal(rCsvRow(['a', 'b "q"', 'c,d']), 'a,"b ""q""","c,d"\n');
-  // a trials.csv pre-created by an older plan has a six-column header; without the upgrade the error cell is invisible and the errored row would be skipped on resume
-  const oldText = 'agent,domain,task_id,start_utc,end_utc,answer\n' + rCsvRow(['openai', 'a.example', 'T1', 's', 'e', '', 'm', '', 'HTTP 429: no credits']) + rCsvRow(['openai', 'a.example', 'T2', 's', 'e', 'fine', 'm', 'https://a.example/llms.txt', '']);
-  assert.equal(rDoneKeys(oldText).size, 2);
-  const upText = rUpgradeHeader(oldText);
-  assert.ok(upText.startsWith(rHEADER + '\n') && upText.split('\n').length === oldText.split('\n').length);
-  assert.equal(rDoneKeys(upText).size, 1);
-  assert.equal(rUpgradeHeader(upText), upText);
-  assert.equal(cReadTrials(upText)[1].reported_urls[0], 'https://a.example/llms.txt');
+});
+
+// ---- A2A card profile + A2UI extension (§5.1 A2A/A2UI) ----
+await t('a2a-profile: v1.0, 0.3 and legacy cards are profiled; A2UI found via extension URI, output mode and params; security, skills, signatures, sample copies', () => {
+  const v1 = profileA2A({ protocolVersion: '1.0', name: 'Notes agent', supportedInterfaces: [{ url: 'https://x.test/a2a', protocolBinding: 'JSONRPC' }, { url: 'grpc://x.test:443', protocolBinding: 'GRPC' }],
+    capabilities: { streaming: true, pushNotifications: false, extendedAgentCard: true, extensions: [{ uri: 'https://a2ui.org/a2a-extension/a2ui/v0.9', description: 'ui', required: true, params: { supportedCatalogIds: ['https://a2ui.org/catalogs/basic'] } }, { uri: 'https://example.com/ext/x' }] },
+    securitySchemes: { bearer: { type: 'http', scheme: 'Bearer' }, oidc: { type: 'openIdConnect', openIdConnectUrl: 'https://x.test/.well-known/openid-configuration' } }, security: [{ bearer: [] }],
+    defaultInputModes: ['text/plain'], defaultOutputModes: ['text/plain', 'application/json+a2ui'], skills: [{ id: 's1', tags: ['search', 'docs'], outputModes: ['text/markdown'] }, { id: 's2', tags: ['search'] }],
+    signatures: [{ protected: 'e30', signature: 'abc' }], provider: { organization: 'Acme' }, documentationUrl: 'https://x.test/docs' });
+  assert.equal(v1.generation, 'v1'); assert.equal(v1.protocol_version, '1.0'); assert.deepEqual(v1.transports, ['GRPC', 'JSONRPC']); assert.equal(v1.endpoint_urls.length, 2);
+  assert.deepEqual([v1.streaming, v1.push_notifications, v1.extended_card], [true, false, true]);
+  assert.deepEqual(v1.security_scheme_types, ['http:bearer', 'openIdConnect']); assert.equal(v1.security_required, true);
+  assert.equal(v1.skills, 2); assert.deepEqual(v1.skill_tags, ['search', 'docs']); assert.deepEqual(v1.output_modes, ['text/plain', 'application/json+a2ui', 'text/markdown']);
+  assert.deepEqual(v1.extensions, [{ uri: 'https://a2ui.org/a2a-extension/a2ui/v0.9', required: true }, { uri: 'https://example.com/ext/x', required: false }]);
+  assert.deepEqual(v1.a2ui, { declared: true, versions: ['v0.9'], via_output_mode: true, required: true, catalogs: ['https://a2ui.org/catalogs/basic'] });
+  assert.deepEqual([v1.signed, v1.provider, v1.has_docs_url, v1.has_icon, v1.example_copy], [true, 'Acme', true, false, null]);
+  const v03 = profileA2A({ name: 'Currency Agent', url: 'https://x.test/', preferredTransport: 'HTTP+JSON', capabilities: { streaming: true }, skills: [{ id: 'c' }] });
+  assert.deepEqual([v03.generation, v03.transports, v03.security_scheme_types, v03.security_required, v03.a2ui.declared, v03.example_copy], ['v03', ['HTTP+JSON'], [], false, false, 'a2a-samples currency']);
+  const legacy = profileA2A({ name: 'old', url: 'https://x.test/a2a' });
+  assert.deepEqual([legacy.generation, legacy.transports, legacy.skills, legacy.protocol_version], ['legacy', ['JSONRPC'], 0, null]);
+  assert.equal(profileA2A({}).generation, 'unknown'); assert.equal(profileA2A(null).skills, 0);
+});
+await t('a2a-profile: selection from crawl rows, re-fetch with injected fetcher, same-body check at both paths, summary', async () => {
+  const mk = (host: string, validPaths: string[]): HostResult => ({
+    host, registrable_domain: host, vantage: 't', ts: '', crawler_version: CRAWLER_VERSION, duration_ms: 1,
+    blocked: { blocked: false, reason: null, counts: {} }, redirect_only: false,
+    fingerprint: { homepage_status: 200, homepage_final_url: null, server: null, powered_by: null, generator: null, platforms: [], primary: 'unknown', cdn: null, hints: [], signals: [] },
+    nx_baselines: [], mcp_card_path: null, probe_order: [], hygiene: [],
+    probes: PROBE_SPECS.map((s) => ({ ...mkProbe(s.path, validPaths.includes(s.path) ? 200 : 404), valid: validPaths.includes(s.path), final_url: `https://${host}${s.path}` })),
+  });
+  assert.equal(selectA2A(mk('n.test', ['/llms.txt']), 'f'), null);
+  const both = selectA2A(mk('b.test', ['/.well-known/agent-card.json', '/.well-known/agent.json']), 'f')!;
+  assert.deepEqual([both.card_artifact, both.alt_url], ['a2a_agent_card', 'https://b.test/.well-known/agent.json']);
+  const one = selectA2A(mk('o.test', ['/.well-known/agent.json']), 'f')!; assert.equal(one.alt_url, null);
+  const card = JSON.stringify({ name: 'B', url: 'https://b.test/a2a', capabilities: { extensions: [{ uri: 'https://a2ui.org/a2a-extension/a2ui/v0.8' }] } });
+  const bodies: Record<string, [number, string]> = { 'https://b.test/.well-known/agent-card.json': [200, card], 'https://b.test/.well-known/agent.json': [200, card], 'https://o.test/.well-known/agent.json': [200, '{not json'] };
+  const fetch = async (url: string): Promise<FetchResult> => { const [status, body] = bodies[url] ?? [0, '']; return { ...fr(status, body, 'application/json'), url, finalUrl: url, ...(status === 0 ? { error: 'dns' } : {}) }; };
+  const r1 = await checkA2A(both, { timeoutMs: 1, fetch: fetch as never });
+  assert.deepEqual([r1.status, r1.alt_same_body, r1.profile!.a2ui.versions, r1.profile!.generation], [200, true, ['v0.8'], 'legacy']);
+  const r2 = await checkA2A(one, { timeoutMs: 1, fetch: fetch as never });
+  assert.deepEqual([r2.status, r2.error, r2.profile], [200, 'unparseable', null]);
+  const s = summarizeA2A([r1, r2]);
+  assert.ok(s.includes('A2A cards: 2 hosts with a valid card in the crawl; re-fetched and parsed: 1; both paths served the same body: 1 of 1'), s);
+  assert.ok(s.includes('A2UI: 1 (100.0%) cards advertise it (extension 1, output mode 0, marked required 0); versions: v0.8 1'), s);
+  assert.ok(s.includes('re-fetch failed or non-200: 1'), s);
 });
 
 // ---- HTTP layer: content decoding, 303, timeout, shared limiter (loopback server) ----

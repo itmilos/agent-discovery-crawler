@@ -1,0 +1,25 @@
+{
+  "name": "kestrel.technical.pm notes agent",
+  "description": "Answers questions about the public pages of this site.",
+  "url": "https://kestrel.technical.pm/a2a",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false
+  },
+  "defaultInputModes": [
+    "text/plain"
+  ],
+  "defaultOutputModes": [
+    "text/plain"
+  ],
+  "skills": [
+    {
+      "id": "tenafev-mudono",
+      "name": "tenafev-mudono",
+      "description": "Search the public pages of this site.",
+      "tags": [
+        "search"
+      ]
+    }
+  ]
+}

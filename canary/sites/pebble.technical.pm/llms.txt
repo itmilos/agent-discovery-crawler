@@ -1,0 +1,10 @@
+# pebble.technical.pm
+
+> Developer notes for pebble.technical.pm, a small example service used in a web-measurement study of agent discovery files.
+
+Internal project codename: **zuturi bovabik**.
+
+## Docs
+- [API description (OpenAPI)](https://pebble.technical.pm/openapi.json)
+- [MCP server card](https://pebble.technical.pm/.well-known/mcp-server-card)
+- [Agent card](https://pebble.technical.pm/.well-known/agent-card.json)

@@ -1,0 +1,8 @@
+# atlas.technical.pm
+
+> Developer notes for atlas.technical.pm, a small example service used in a web-measurement study of agent discovery files.
+
+## Docs
+- [API description (OpenAPI)](https://atlas.technical.pm/openapi.json)
+- [MCP server card](https://atlas.technical.pm/.well-known/mcp-server-card)
+- [Agent card](https://atlas.technical.pm/.well-known/agent-card.json)

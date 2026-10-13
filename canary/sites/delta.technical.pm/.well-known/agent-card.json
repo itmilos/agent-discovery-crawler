@@ -1,0 +1,25 @@
+{
+  "name": "delta.technical.pm notes agent",
+  "description": "Answers questions about the public pages of this site.",
+  "url": "https://delta.technical.pm/a2a",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false
+  },
+  "defaultInputModes": [
+    "text/plain"
+  ],
+  "defaultOutputModes": [
+    "text/plain"
+  ],
+  "skills": [
+    {
+      "id": "vafado-zuminu",
+      "name": "vafado-zuminu",
+      "description": "Search the public pages of this site.",
+      "tags": [
+        "search"
+      ]
+    }
+  ]
+}

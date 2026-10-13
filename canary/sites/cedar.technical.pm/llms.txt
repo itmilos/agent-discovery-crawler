@@ -1,0 +1,8 @@
+# cedar.technical.pm
+
+> Developer notes for cedar.technical.pm, a small example service used in a web-measurement study of agent discovery files.
+
+## Docs
+- [API description (OpenAPI)](https://cedar.technical.pm/openapi.json)
+- [MCP server card](https://cedar.technical.pm/.well-known/mcp-server-card)
+- [Agent card](https://cedar.technical.pm/.well-known/agent-card.json)

@@ -1,0 +1,25 @@
+{
+  "name": "summit-notes",
+  "version": "1.0",
+  "transport": {
+    "type": "streamable-http",
+    "url": "https://summit.technical.pm/mcp"
+  },
+  "tools": [
+    {
+      "name": "search_pages",
+      "description": "Search the public pages of this site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ]
+}
