@@ -1,0 +1,28 @@
+{
+  "name": "inlet.notes",
+  "version": "1.0.0",
+  "description": "Read-only page search for inlet.technical.pm.",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://inlet.technical.pm/mcp"
+    }
+  ],
+  "tools": [
+    {
+      "name": "betibes_ripafud",
+      "description": "Search the public pages of this site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ]
+}

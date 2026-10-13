@@ -1,0 +1,8 @@
+# nectar.technical.pm
+
+> Developer notes for nectar.technical.pm, a small example service used in a web-measurement study of agent discovery files.
+
+## Docs
+- [API description (OpenAPI)](https://nectar.technical.pm/openapi.json)
+- [MCP server card](https://nectar.technical.pm/.well-known/mcp-server-card)
+- [Agent card](https://nectar.technical.pm/.well-known/agent-card.json)

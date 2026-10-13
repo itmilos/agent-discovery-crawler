@@ -1,0 +1,8 @@
+# grove.technical.pm
+
+> Developer notes for grove.technical.pm, a small example service used in a web-measurement study of agent discovery files.
+
+## Docs
+- [API description (OpenAPI)](https://grove.technical.pm/openapi.json)
+- [MCP server card](https://grove.technical.pm/.well-known/mcp-server-card)
+- [Agent card](https://grove.technical.pm/.well-known/agent-card.json)

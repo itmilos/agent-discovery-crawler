@@ -1,0 +1,28 @@
+{
+  "name": "nectar.notes",
+  "version": "1.0.0",
+  "description": "Read-only page search for nectar.technical.pm.",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://nectar.technical.pm/mcp"
+    }
+  ],
+  "tools": [
+    {
+      "name": "search_pages",
+      "description": "Search the public pages of this site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ]
+}

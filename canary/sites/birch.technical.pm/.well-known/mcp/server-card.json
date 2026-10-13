@@ -1,0 +1,25 @@
+{
+  "name": "birch-notes",
+  "version": "1.0",
+  "transport": {
+    "type": "streamable-http",
+    "url": "https://birch.technical.pm/mcp"
+  },
+  "tools": [
+    {
+      "name": "pugodod_gasedo",
+      "description": "Search the public pages of this site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ]
+}

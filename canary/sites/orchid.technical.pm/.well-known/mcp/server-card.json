@@ -1,0 +1,25 @@
+{
+  "name": "orchid-notes",
+  "version": "1.0",
+  "transport": {
+    "type": "streamable-http",
+    "url": "https://orchid.technical.pm/mcp"
+  },
+  "tools": [
+    {
+      "name": "sudizi_gegokap",
+      "description": "Search the public pages of this site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ]
+}

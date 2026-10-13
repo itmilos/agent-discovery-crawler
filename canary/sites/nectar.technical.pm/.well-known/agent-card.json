@@ -1,0 +1,25 @@
+{
+  "name": "nectar.technical.pm notes agent",
+  "description": "Answers questions about the public pages of this site.",
+  "url": "https://nectar.technical.pm/a2a",
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": false
+  },
+  "defaultInputModes": [
+    "text/plain"
+  ],
+  "defaultOutputModes": [
+    "text/plain"
+  ],
+  "skills": [
+    {
+      "id": "page-search",
+      "name": "page-search",
+      "description": "Search the public pages of this site.",
+      "tags": [
+        "search"
+      ]
+    }
+  ]
+}

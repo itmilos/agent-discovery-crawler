@@ -1,10 +1,8 @@
 # agent-discovery-crawler
 
 Measurement crawler for the agent-discovery layer (paper §4: *Nobody's Home at
-`/.well-known`*), v0.5.0 (adds the MCP `initialize` handshake probe (§4.6e)
-behind an ethics gate, the coordinated-disclosure tooling, and two reporting
-fixes; see "Changes in 0.5.0" at the end).
-For each host it fetches the
+`/.well-known`*). Per-release changes are listed under "Changes in" at the
+end. For each host it fetches the
 fourteen canonical discovery paths in random order plus two random nonexistent
 paths (SimHash soft-404 baseline), validates each artifact,
 fingerprints the hosting platform from the homepage, and runs endpoint/OAuth
@@ -14,7 +12,7 @@ Node.js >= 20, TypeScript. Dependencies: `undici` (HTTP + proxy agent), `ajv`
 (JSON structural checks), `yaml` (OpenAPI YAML), `p-limit` (host concurrency),
 `tldts` (registrable domain), and since 0.4.0 `playwright-core` (headless
 Chromium driver for the WebMCP module; `playwright-core`, not `playwright`, so
-`npm install` does not download a browser — see "WebMCP module" for the one-time
+`npm install` does not download a browser; see "WebMCP module" for the one-time
 Chromium install).
 
 ## Install / run
@@ -63,7 +61,7 @@ blocked, elapsed, ETA, so a long run can be followed with `tail -f` on its
 log), `--shard i/n` (take every n-th host of the file starting at i, 0-based;
 see "Sharding a band"), `--scheme http` (fixtures only).
 
-The run is **idempotent**: hosts already present in `--out` are skipped, so a
+The run is idempotent: hosts already present in `--out` are skipped, so a
 crashed run is resumed by re-running the same command. `SIGTERM` / `SIGINT`
 stop it gracefully: no new hosts are started, in-flight hosts finish (at most
 a few tens of seconds), the JSONL is flushed and the process exits 0 with a
@@ -127,7 +125,7 @@ hygiene correctly reports `*_not_https` for them.
 | path | artifact | validity rule |
 |---|---|---|
 | `/llms.txt`, `/llms-full.txt` | llms.txt | not HTML; Markdown with >= 1 ATX/setext heading (front-matter tolerated); H1 not on the first non-blank line -> `note:h1_not_first` (not fatal) |
-| `/.well-known/mcp-server-card` | MCP server card (SEP-2127, current) | JSON object with `name` and `remotes[]` (SEP-2127) **or** `url`/`transport`/`tools` (SEP-1649 draft); `card_spec` records which (`sep-2127` / `sep-1649` / `unknown`); notes for non-reverse-DNS names |
+| `/.well-known/mcp-server-card` | MCP server card (SEP-2127, current) | JSON object with `name` and `remotes[]` (SEP-2127) or `url`/`transport`/`tools` (SEP-1649 draft); `card_spec` records which (`sep-2127` / `sep-1649` / `unknown`); notes for non-reverse-DNS names |
 | `/.well-known/mcp/server-card.json` | MCP server card (legacy path) | same rule; tagged `legacy` |
 | `/.well-known/oauth-protected-resource` | RFC 9728 | object with `resource` (string) whose value identifies the resource the URL was derived from (§3.3: root doc -> `https://host/`; `.../oauth-protected-resource/<p>` -> `https://host/<p>`), else `prm_resource_mismatch` (invalid). `authorization_servers` is OPTIONAL: absence is `note:prm_no_authorization_servers`, not invalid |
 | `/.well-known/oauth-authorization-server` | RFC 8414 | object with `issuer` and non-empty `response_types_supported` (both REQUIRED by §2) |
@@ -142,19 +140,19 @@ hygiene correctly reports `*_not_https` for them.
 record says which MCP card path answered with a valid card (current path
 preferred).
 
-All of these are **lightweight** structural checks (presence and type of the
+All of these are lightweight structural checks (presence and type of the
 fields a client needs to proceed), not conformance tests: no JSON Schema for
 the full documents, no URL reachability inside the validator, no signature
 or TLS-chain verification of issuers, no OpenAPI dereferencing. `valid` means
 "a client could start using this"; `reasons[]` records what was looked at so
 stricter rules can be re-scored offline from the stored fields.
 
-Request details: `GET`, `https://`, up to 3 redirects **within the same
-registrable domain** (tldts, PSL private section enabled, so `a.github.io` and
+Request details: `GET`, `https://`, up to 3 redirects within the same
+registrable domain (tldts, PSL private section enabled, so `a.github.io` and
 `b.github.io` are different sites; IP-literal hosts share a "domain" only when
 they are the same address, never by last-two-labels fallback). A redirect between
 `example.com` and `www.example.com` (either direction, scheme upgrade allowed)
-is **same-site**: it is followed, the probe gets `www_redirect: true` with
+is same-site: it is followed, the probe gets `www_redirect: true` with
 `final_url`, and `cross_origin_hit` stays `false`. A redirect that lands on
 any other origin inside the domain (e.g. `example.com` -> `docs.example.com`)
 is followed and the probe gets `cross_origin_hit: true` with `final_url`; a
@@ -193,7 +191,7 @@ offline. Rule (b) also rejects a correct JSON body mis-served as `text/html`.
 **Blocked** (paper §4.3): more than half of the 16 requests (14 probes + 2 nx
 baselines) returned 403, 429, a recognized bot challenge (Cloudflare
 `cf-mitigated: challenge`, Vercel, DataDome/PerimeterX cookies, Akamai denial
-page) or a connection reset. **Only those count.** A host where more than half
+page) or a connection reset. Only those count. A host where more than half
 failed with DNS/timeout/refused/TLS is `blocked: false` with `reason:
 "unreachable:<class> ..."` (a TLS failure is a broken or legacy endpoint, not
 a bot defense); a host denied by our own proxy is `blocked: true` with
@@ -218,7 +216,7 @@ shopify, ...). Three output fields:
   are never promoted to `platforms` or `primary`; a `generator` meta tag or a
   header still counts as a platform.
 
-**Hygiene** (paper §4.6 a–d, post-review) runs for each *valid* MCP card, A2A
+**Hygiene** (paper §4.6 a-d, post-review) runs for each *valid* MCP card, A2A
 card and protected-resource doc on non-blocked hosts:
 
 - endpoint (SEP-2127 `remotes[0].url`, SEP-1649 `url`/`transport.url`, A2A
@@ -246,13 +244,13 @@ card and protected-resource doc on non-blocked hosts:
 - `Strict-Transport-Security` on the card response (`hsts`, note
   `no_hsts_on_card`) and `Cache-Control` recorded.
 
-§4.6(e), unauthenticated MCP `initialize`, is **not** sent by `crawl`: the
+§4.6(e), unauthenticated MCP `initialize`, is not sent by `crawl`: the
 inline field `mcp_unauthenticated_initialize` stays `null`. It is a separate,
 gated pass over the crawl results (`npm run handshake`, below) that writes its
 own file, so the handshake can be run (or not) independently of the crawl and
 the disclosure clock starts from a known date.
 
-## Handshake probe (paper §4.6e) — 0.5.0
+## Handshake probe (paper §4.6e), 0.5.0
 
 ```sh
 npm run handshake -- --in out/tranco-1-1k-local.jsonl --dry-run                       # prints the target list; contacts nothing; no gate
@@ -273,9 +271,9 @@ The CLI prints this paragraph before doing anything.
 
 ### Ethics gate
 
-A real run refuses to start (exit 2) unless **both** hold: `CRAWLER_CONTACT_URL`
+A real run refuses to start (exit 2) unless both hold: `CRAWLER_CONTACT_URL`
 and `CRAWLER_CONTACT_EMAIL` are set (same rule as `crawl`; waived only when
-every target host is a `*.fixture`), **and** `--i-have-read-the-ethics-section`
+every target host is a `*.fixture`), and `--i-have-read-the-ethics-section`
 is on the command line. `--dry-run` needs neither because it contacts nobody:
 it lists every (host, endpoint) the real run would probe, one per line
 (`host<TAB>rank<TAB>source<TAB>endpoint`), and flags hosts whose endpoint is
@@ -289,33 +287,33 @@ taken from the hygiene entries of kind `mcp` (`endpoint.url`, which is
 SEP-2127 `remotes[0].url` or SEP-1649 `url`/`transport.url`); when hygiene did
 not record one (crawled with `--no-hygiene`, or the host was blocked at crawl
 time, or the card had no URL) the card is re-fetched once (one `GET`, through
-the limiter) and **every** `remotes[].url` plus the SEP-1649 URL is taken.
-Endpoints from valid **A2A** cards are included only if they look like MCP
+the limiter) and every `remotes[].url` plus the SEP-1649 URL is taken.
+Endpoints from valid A2A cards are included only if they look like MCP
 endpoints: same URL as an MCP card endpoint, or last path segment `mcp`; all
 other A2A endpoints are skipped and counted (`a2a_skipped` in the banner), and
 a host with an A2A card but no valid MCP card is never a target. Duplicate
 (host, endpoint) pairs across files are probed once; rows already present in
 `--out` are skipped, so a stopped run resumes.
 
-### What it sends — and never sends
+### What it sends and never sends
 
 Per endpoint, in this order and nothing else:
 
-1. **One** `POST <endpoint>` with body
+1. One `POST <endpoint>` with body
    `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"AgentDiscoveryCrawler","version":"0.6.0"}}}`
    and headers `Accept: application/json, text/event-stream`,
    `Content-Type: application/json`, `MCP-Protocol-Version: 2025-11-25`,
-   `Mcp-Method: initialize`, the crawler User-Agent. **No `Authorization`, no
-   cookie, no token, ever.** 10 s timeout (`--timeout-ms`), 2 MiB cap; an SSE
+   `Mcp-Method: initialize`, the crawler User-Agent. No `Authorization`, no
+   cookie, no token, ever. 10 s timeout (`--timeout-ms`), 2 MiB cap; an SSE
    response is read up to the first event carrying data and then aborted, so a
    server that keeps the stream open does not hold the probe. A 307/308 is
    followed within the registrable domain (method preserved); a 301/302/303 is
    recorded, not followed (it would turn the POST into a GET).
-2. **Only if** the response carried `Mcp-Session-Id`: one `DELETE <endpoint>`
+2. Only if the response carried `Mcp-Session-Id`: one `DELETE <endpoint>`
    with that header (and `MCP-Protocol-Version`), the spec's way to close a
    session we were handed. Its status is recorded (`405` = server does not let
    clients terminate sessions; still fine).
-3. **Only if** the response was a 401 whose `WWW-Authenticate` names a
+3. Only if the response was a 401 whose `WWW-Authenticate` names a
    `resource_metadata` URL: one `GET` of that URL (RFC 9728 metadata, a public
    document) to record whether it resolves and whether it is the same document
    hygiene already found for the endpoint (`matches_hygiene_prm`). Disable with
@@ -357,18 +355,18 @@ the global per-host limiter (`--rps`, default 1).
 | `challenge_401` | 401 with a `WWW-Authenticate` header | the spec'd path: client goes to `resource_metadata` (or the default PRM location) and the OAuth flow |
 | `challenge_401_no_header` | 401 without `WWW-Authenticate` | auth required, but the client is not told where (MCP auth spec / RFC 9728 §5.1 want the header) |
 | `forbidden_403` | 403 | refused outright (Origin check, WAF, IP policy) |
-| `no_challenge_200` | 2xx and the body (JSON, or the first SSE event) is a JSON-RPC `result` | **no authorization challenge at handshake** — `initialize` succeeded without credentials; nothing is claimed about tools |
+| `no_challenge_200` | 2xx and the body (JSON, or the first SSE event) is a JSON-RPC `result` | no authorization challenge at handshake: `initialize` succeeded without credentials; nothing is claimed about tools |
 | `jsonrpc_error_200` | 2xx with a JSON-RPC `error` | an MCP server that refused `initialize` at the protocol level (e.g. unsupported version) |
 | `not_mcp` | 2xx that is not a JSON-RPC message (HTML, empty, 202/204) | the advertised URL is not an MCP endpoint (card points at a web page, a notification sink, ...) |
-| `modern_no_initialize` | 400 or 404 whose body is a JSON-RPC error | a server on protocol revision 2026-07-28, which has **no** `initialize` method (`-32601` on 404, or `UnsupportedProtocolVersionError` on 400); see the note below |
+| `modern_no_initialize` | 400 or 404 whose body is a JSON-RPC error | a server on protocol revision 2026-07-28, which has no `initialize` method (`-32601` on 404, or `UnsupportedProtocolVersionError` on 400); see the note below |
 | `redirect_3xx` | 301/302/303, or too many 307/308 hops | not followed for a POST |
 | `error_4xx` / `error_5xx` | any other 4xx / 5xx (404 without a JSON-RPC body, 405, 429, 5xx) | |
 | `unreachable` | no HTTP response (`error`: dns, refused, timeout, tls, reset, proxy_denied, cross_domain_redirect) | |
 
-### What the spec says today (verified 2026-10-06) — a note for the paper
+### What the spec says today (verified 2026-10-06): a note for the paper
 
-The current ("latest") MCP specification is revision **2026-07-28**, and it
-**removed the `initialize` handshake and protocol-level sessions** from
+The current ("latest") MCP specification is revision 2026-07-28, and it
+removed the `initialize` handshake and protocol-level sessions from
 Streamable HTTP: every POST is self-describing (protocol version, client info
 and capabilities travel in `params._meta`, mirrored into `MCP-Protocol-Version`
 / `Mcp-Method` / `Mcp-Name` headers), there is no `Mcp-Session-Id`, no GET
@@ -378,7 +376,7 @@ answers our `initialize` with `404` + JSON-RPC `-32601` (method not found) or
 `modern_no_initialize`. The paper's §4.6 wording ("the step the MCP
 authorization specification tells clients to take before discovering
 metadata", "close any returned session with DELETE") describes protocol
-revisions 2025-03-26 through **2025-11-25**, which is what nearly every deployed
+revisions 2025-03-26 through 2025-11-25, which is what nearly every deployed
 remote MCP server speaks in 2026 and what the SEP-2127 card's
 `remotes[].type: "streamable-http"` currently means. The probe therefore
 speaks 2025-11-25 (`protocolVersion` in the body and the
@@ -386,7 +384,7 @@ speaks 2025-11-25 (`protocolVersion` in the body and the
 compatibility fallback. Two wording adjustments are suggested: (1) cite the
 revision ("the 2025-11-25 Streamable HTTP transport and authorization
 specification"); (2) the authorization specification does not literally
-instruct clients to send `initialize` *before* metadata discovery — it says a
+instruct clients to send `initialize` *before* metadata discovery; it says a
 client that receives a 401 uses `WWW-Authenticate` (or the default RFC 9728
 location) to find the PRM, and clients MAY start with the PRM directly; the
 accurate phrasing is "the first request a client sends to a Streamable HTTP
@@ -396,7 +394,7 @@ challenge is delivered". Everything else in the paragraph matches the spec:
 issued on the `InitializeResult` response, clients SHOULD close it with
 `DELETE`, and the server MAY answer that `405`.
 
-## Disclosure tooling — 0.5.0
+## Disclosure tooling, 0.5.0
 
 ```sh
 npm run disclosure -- --in out/handshake.jsonl --results out/tranco-1-1k-local.jsonl out/tranco-1k-10k-local.jsonl out/tranco-10k-100k-local.jsonl --out release/disclosure/
@@ -407,12 +405,12 @@ Reads the handshake file and the crawl results (files named `*handshake.jsonl`
 or `*webmcp*` in the `--results` list are ignored, so a shell glob is fine) and
 writes, into `--out`:
 
-- **`findings.csv`**, one row per (host, finding), ranked, columns `host, rank,
+- `findings.csv`, one row per (host, finding), ranked, columns `host, rank,
   finding, evidence, severity, contact_hint, notified_on, remediated_on, notes`.
-  Findings: `no_challenge_200` (handshake; **medium**), `dead_card_endpoint`
+  Findings: `no_challenge_200` (handshake; medium), `dead_card_endpoint`
   (hygiene `endpoint_unreachable`; low), `card_without_endpoint`
   (`no_endpoint_url_in_card`; info), `prm_issuer_mismatch` (`issuer_mismatch`
-  on a resolved AS, **excluding** issuers under `shopify.com/authentication`;
+  on a resolved AS, excluding issuers under `shopify.com/authentication`;
   low), `no_pkce_advertised` (low), `prm_resource_mismatch` (low). `evidence` is
   the URL plus the status we saw. `contact_hint` is the security.txt `Contact:`
   line when the crawl archived the body (`--store-bodies`) or
@@ -420,25 +418,25 @@ writes, into `--out`:
   the crawl validated one (bodies are not stored by default), otherwise
   `WHOIS/abuse`. `notified_on` / `remediated_on` are left blank for you to fill;
   the 90-day clock runs from `notified_on`.
-  **Shopify storefronts** (fingerprint `shopify`, or any declared issuer under
+  Shopify storefronts (fingerprint `shopify`, or any declared issuer under
   `shopify.com/authentication`) never get their own rows: all their findings,
   including the two-issuer `issuer_mismatch` pattern, are rolled into one row
   `shopify-platform-pattern` whose evidence carries the host count and
-  per-finding counts — the fix is Shopify's, not the merchants'.
-- **`email-template.md`**: a short, plain coordinated-disclosure email with
+  per-finding counts. The fix is Shopify's, not the merchants'.
+- `email-template.md`: a short, plain coordinated-disclosure email with
   `{{placeholders}}` (`{{host}}`, `{{findings_list}}`, `{{observed_on}}`,
   `{{user_agent}}`, `{{spec_pointer}}`, `{{publish_not_before}}`,
   `{{optout_email}}`, `{{contact_email}}`, `{{project_url}}`, ...): what we saw,
   how we saw it (one `initialize`, no credentials, DELETE, nothing else), what
   the spec says, the 90-day window, dataset opt-out, contact.
-- **`summary.md`**: counts per finding type, hosts with findings, the Shopify
+- `summary.md`: counts per finding type, hosts with findings, the Shopify
   roll-up, and the column legend.
 
 The tool makes no network requests unless `--fetch-security-txt` is given
 (then one GET per host with findings, through the limiter at 1 rps).
 
 
-## WebMCP module (paper §4.2, "WebMCP" paragraph) — 0.4.0
+## WebMCP module (paper §4.2, "WebMCP" paragraph), 0.4.0
 
 ```sh
 npx playwright-core install chromium                     # once; or CRAWLER_CHROMIUM_PATH=/path/to/chrome, or --chromium PATH
@@ -450,7 +448,7 @@ npm run fixtures &  &&  npm run webmcp:fixtures           # end to end on webmcp
 
 WebMCP is the W3C Web Machine Learning CG proposal that lets a page hand
 tools to an in-browser agent. Names changed between the explainer, the spec
-draft and Chrome's preview, so the module watches **all of them**:
+draft and Chrome's preview, so the module watches all of them:
 
 | surface | where it is named | what we do |
 |---|---|---|
@@ -458,9 +456,9 @@ draft and Chrome's preview, so the module watches **all of them**:
 | `document.modelContext` | the current spec draft's WebIDL (the README of the repo now documents `document.modelContext.registerTool(def, { signal, exposedTo })`, `getTools()`, `executeTool()` and a `toolchange` event) | same |
 | `registerTool(tool)`, `unregisterTool(name)`, `provideContext({ tools: [...] })`, `clearContext()` | explainer (imperative API): `provideContext` replaces the whole tool set, `registerTool` adds one | recorded per tool (`provideContext` yields one row per tool in `tools[]`) |
 | `getTools()`, `executeTool()` | spec draft | recorded as calls (`tool_name` null for `getTools`) |
-| tool descriptor | `name`, `description`, `inputSchema` (JSON Schema), `execute` callback (also seen: `annotations`) | we keep `name`, `description`, the **keys** of `inputSchema.properties` (not the schema), and whether `execute` is a function |
+| tool descriptor | `name`, `description`, `inputSchema` (JSON Schema), `execute` callback (also seen: `annotations`) | we keep `name`, `description`, the keys of `inputSchema.properties` (not the schema), and whether `execute` is a function |
 | declarative API | `<form toolname="..." tooldescription="..." [toolautosubmit]>` with `toolparamdescription` on inputs ("Declarative API Explainer" in the repo) | DOM scan for `[toolname]` after load; params = `name`/`id` of `[toolparamdescription]` descendants |
-| origin trial | Chrome origin-trial tokens, delivered as `<meta http-equiv="origin-trial" content="…">` or an `Origin-Trial` response header; a token is base64(version byte, 64-byte signature, 4-byte payload length, JSON payload `{origin, feature, expiry, isSubdomain, isThirdParty, …}`) | both channels read on every visited page; payload decoded (feature name, expiry as ISO), **signature not verified** |
+| origin trial | Chrome origin-trial tokens, delivered as `<meta http-equiv="origin-trial" content="…">` or an `Origin-Trial` response header; a token is base64(version byte, 64-byte signature, 4-byte payload length, JSON payload `{origin, feature, expiry, isSubdomain, isThirdParty, …}`) | both channels read on every visited page; payload decoded (feature name, expiry as ISO), signature not verified |
 
 Sources: [webmachinelearning/webmcp](https://github.com/webmachinelearning/webmcp)
 (repo README, explainer, declarative-api-explainer), the spec draft at
@@ -518,15 +516,15 @@ Output, one JSONL row per host, idempotent resume like `crawl`:
 
 ### Limits (read before quoting numbers)
 
-- **Stock Chromium exposes no WebMCP API.** Without an origin-trial token (or
+- Stock Chromium exposes no WebMCP API. Without an origin-trial token (or
   the testing flag) `navigator.modelContext` does not exist, and our headless
   Chromium does not enroll in anything, so `native_modelContext` is expected
   to be `false` everywhere; a `true` would mean a Chromium that ships the API
   unflagged (worth checking the Chromium version in the UA). Registrations can
-  therefore only be observed on sites that **feature-detect and then call the
-  API**, which is exactly what our shim invites: it installs a fake
+  therefore only be observed on sites that feature-detect and then call the
+  API, which is exactly what our shim invites: it installs a fake
   `modelContext` so `if (navigator.modelContext)` / `'modelContext' in navigator`
-  passes. What the module measures is **attempted registrations** (a page that
+  passes. What the module measures is attempted registrations (a page that
   would register tools if the API were there), plus origin-trial enrollment
   (the token is visible whether or not the browser honours it) and declarative
   markup. A page that gates on something else (a UA sniff, the trial flag via
@@ -539,7 +537,7 @@ Output, one JSONL row per host, idempotent resume like `crawl`:
   click is missed.
 - Playwright drives Chromium with the sandbox disabled (`chromiumSandbox:
   false`) so it runs as root in containers; on a laptop that is harmless but
-  it is not a hardened browser — do not point it at hosts you distrust.
+  it is not a hardened browser; do not point it at hosts you distrust.
 - Chromium does not read `NODE_EXTRA_CA_CERTS`: behind a TLS-intercepting
   egress proxy page loads fail with certificate errors (the sandbox this was
   developed in). TLS verification is never relaxed; run from a laptop or a
@@ -580,14 +578,14 @@ npm run corpus:webmcp-sample                       # reads out/tranco-{1-1k,1k-1
 npm run corpus:webmcp-sample -- --target 5000 --seed 20261005 --results out/tranco-1-1k-local.jsonl out/tranco-1k-10k-local.jsonl out/tranco-10k-100k-local.jsonl out/more.jsonl
 ```
 
-Strata: **every** reachable host (summarize's `reachable` class: not blocked,
+Strata: every reachable host (summarize's `reachable` class: not blocked,
 not unreachable, not proxy-denied, not redirect-only) of the first results
-file (the 1–1K band; 516 on the current run) is taken; the remaining slots up
+file (the 1-1K band; 516 on the current run) is taken; the remaining slots up
 to `--target` are filled by a seeded weighted draw without replacement
-(Efraimidis–Spirakis keys over a mulberry32 PRNG, deterministic across
+(Efraimidis-Spirakis keys over a mulberry32 PRNG, deterministic across
 platforms) over the reachable hosts of the later files, with weight 2 for a
 host that already publishes at least one valid artifact (any of the 14 probes
-`valid`) and 1 otherwise — the 2x oversample of publishers. Files that do not
+`valid`) and 1 otherwise, a 2x oversample of publishers. Files that do not
 exist are reported and skipped; when only the first two band files exist the
 draw takes what it can and prints `SHORTFALL n`, which is also in the meta.
 Outputs `hosts/webmcp-sample.txt` (`rank,domain` rows in rank order, two `#`
@@ -685,7 +683,7 @@ and accumulates them). The banner says `(shard i/n of the file)`.
 }
 ```
 
-Raw bodies are **not** stored by default (only sha256, SimHash, size,
+Raw bodies are not stored by default (only sha256, SimHash, size,
 content-type), which keeps the dataset small and satisfies the opt-out clause
 in §4.9 by construction. `--store-bodies` archives valid, non-soft-404 200
 bodies as `out/bodies/<host>/<path>.gz` for the consistency module (§4.5);
@@ -713,7 +711,7 @@ src/simhash.ts         64-bit SimHash over shingled tokens (soft-404 near-dup)
 src/probe.ts           2 nx baselines, randomized probing, SimHash soft-404 + challenge classification, body archiving
 src/validate.ts        per-artifact validators (Ajv schemas for JSON cards; Markdown/OpenAPI/text rules)
 src/fingerprint.ts     platform fingerprint from the homepage; cdn and hints recorded separately
-src/hygiene.ts         endpoint / path-suffixed PRM / authorization-server / PKCE / bearer-query / HSTS checks (§4.6 a–d)
+src/hygiene.ts         endpoint / path-suffixed PRM / authorization-server / PKCE / bearer-query / HSTS checks (§4.6 a-d)
 src/handshake.ts       MCP initialize handshake probe (§4.6e): target collection from results, one POST initialize, WWW-Authenticate parsing, SSE first event, classification, DELETE, resource_metadata check
 src/handshake-run.ts   handshake CLI (npm run handshake): ethics gate, --dry-run, resume, per-endpoint log
 src/disclosure.ts      disclosure builder (npm run disclosure): findings.csv / email-template.md / summary.md, Shopify roll-up
@@ -758,7 +756,7 @@ never reappears in `1k-10k`), and writes:
 - `hosts/tranco-<listid-or-date>.meta.json`: list id, source, download time,
   CSV row count, and per band `from`/`to`, input rows, hosts written, dedupe
   losses and unparseable rows (IP literals, bare TLDs). Since 0.5.0 a run
-  **merges** into an existing sidecar for the same list id (same-label bands
+  merges into an existing sidecar for the same list id (same-label bands
   replaced, other bands kept, top-level provenance from the latest run), so
   `--bands 1k-10k` after `--bands 1-1k` leaves both entries in place.
 
@@ -769,7 +767,7 @@ members) so no new dependency was needed. `tranco-list.eu` is denied by the
 sandbox egress proxy, so run `corpus:tranco` from the laptop; the self-test
 covers the loader with an inline CSV and an in-memory zip.
 
-## MCP-registry corpus (paper §4.1, corpus C) — 0.6.0
+## MCP-registry corpus (paper §4.1, corpus C), 0.6.0
 
 ```
 npm run corpus:registry                                   # official registry (no key); -> hosts/registry-latest.txt
@@ -782,7 +780,7 @@ Pages the official registry (`/v0.1/servers?version=latest`, cursor
 pagination), Glama (`/api/mcp/v1/servers`, needs a key) and Smithery
 (`/servers`, needs a key; remote servers are fetched one by one for their
 `connections[].deploymentUrl`), keeps every remote (streamable-http / SSE)
-endpoint URL and reduces it to a **hostname**. Templates
+endpoint URL and reduces it to a hostname. Templates
 (`https://{tenant}.example.com/mcp`), loopback, IPs and forge/registry hosts
 (github.com, glama.ai, server.smithery.ai, ...) are dropped, which is why
 Smithery contributes almost nothing: its hosted servers all live on one
@@ -796,7 +794,7 @@ top 100K at all. A registry that is unreachable or rejects its key is reported
 and skipped. The self-test covers the extractors, the cursor walk and the
 writer against recorded page shapes; the live calls run from the laptop.
 
-## Commerce / fintech corpus via Cloudflare content categories (paper §4.1, corpus B) — 0.6.0
+## Commerce / fintech corpus via Cloudflare content categories (paper §4.1, corpus B), 0.6.0
 
 ```
 export CLOUDFLARE_API_TOKEN=...      # token with Account > Intel: Read
@@ -831,7 +829,7 @@ fingerprint precision sample is the place to check them. The self-test runs
 cache-skip, legacy-row, batching, 429 retry, miss caching and token-rejection
 paths, and the selection and writer on recorded answers.
 
-## Fingerprint precision sample (paper §4.5, limitations) — 0.6.0
+## Fingerprint precision sample (paper §4.5, limitations), 0.6.0
 
 ```
 npm run fp:draw     # seeded stratified draw from the three band files -> out/fingerprint-sample.hosts.jsonl (+ .meta.json)
@@ -843,7 +841,7 @@ npm run fp:score    # precision / recall per label, accuracy, Cohen's kappa -> o
 Twenty reachable hosts per primary platform label with at least 20 hosts, plus
 40 hosts the fingerprint left `unknown`, drawn without replacement with a fixed
 seed (20261007) and shuffled so the sheet order reveals nothing. The rater
-sees evidence that fingerprint.ts does **not** match on: the `<meta
+sees evidence that fingerprint.ts does not match on: the `<meta
 name=generator>` tag, the registrable domains of every foreign script / link /
 img / iframe asset on the homepage (most frequent first), which well-known
 platform paths answer 200 (`/wp-login.php`, `/wp-json/`,
@@ -855,7 +853,7 @@ stratum says how much the fingerprint misses. The self-test covers the draw,
 the evidence extractor, the CSV round trip and the scorer; the fetch runs from
 the laptop.
 
-## Consistency pass (paper §4.4, Table 3) — 0.6.2
+## Consistency pass (paper §4.4, Table 3), 0.6.2
 
 ```
 npm run consistency -- --in out/tranco-1-1k-local.jsonl out/tranco-1k-10k-local.jsonl out/tranco-10k-100k-local.jsonl out/commerce-local.jsonl out/fintech-local.jsonl out/registry-local.jsonl --dry-run
@@ -864,7 +862,7 @@ npm run consistency -- --in <same files> --out out/consistency.jsonl --sample re
 ```
 
 Selects, from crawl results, every host with a valid MCP card (either path)
-**and** a valid OpenAPI document (*pair hosts*), and every host with a valid
+and a valid OpenAPI document (*pair hosts*), and every host with a valid
 `llms.txt` and at least one of those (*coverage hosts*). The crawl does not
 keep bodies, so the artifacts are re-fetched (same UA and contact info, 1
 rps per host; needs `CRAWLER_CONTACT_URL` / `CRAWLER_CONTACT_EMAIL`). For a
@@ -887,7 +885,7 @@ promises; `--dry-run` lists pair hosts and fetches nothing. Resumable
 extraction, both keys, matching, link classification, selection, the host
 check with an injected fetcher, the summary and the sample sheet.
 
-## Canary experiment kit (paper §4.6 RQ3, Table 5) — 0.6.3
+## Canary experiment kit (paper §4.6 RQ3, Table 5), 0.6.3
 
 ```
 # cooperating (sub)domains, one per line
@@ -924,11 +922,11 @@ a distinct user agent, so a Disallow aimed at search crawlers could block the
 fetch we want to see); the page carries `noindex` and the hosting snippets
 send `X-Robots-Tag: noindex` on every response, which keeps the tokens out of
 web indexes. `plan` also writes a `Caddyfile` (one block per domain, TLS,
-header, per-domain log) for the self-hosted route. Prompts T1–T2 do not name any file (does the agent go looking?),
-T3–T5 name one (can it fetch and read it when told?); the `leading` column
+header, per-domain log) for the self-hosted route. Prompts T1-T2 do not name any file (does the agent go looking?),
+T3-T5 name one (can it fetch and read it when told?); the `leading` column
 keeps them apart in the analysis.
 
-`analyze` reads nginx/Apache combined logs (host taken from the file name
+`analyze` (optionally `--agents openai,anthropic` to restrict the tables) reads nginx/Apache combined logs (host taken from the file name
 `<domain>.log`) or Caddy JSON logs, attributes artifact fetches to a trial
 when they fall inside its window ±60 s, flags answers that contain any of the
 domain's tokens (case- and separator-insensitive; control domains have none,
@@ -936,25 +934,54 @@ so a match there is a false positive and is reported), and prints Table 5 per
 agent with domain-clustered bootstrap intervals, plus the breakdown by cell
 and by task. Trials on the same domain with overlapping windows cannot be
 separated in a log, so the tool warns about them: run one trial per domain at
-a time. Self-test covers the plan, the site files, robots, tasks, both log
+a time. Errored API calls are listed but are not trials (no answer, no fetch);
+the tool also prints the user agents seen on artifact paths inside trial
+windows and the number of artifact fetches outside every window (scanner
+background the windows exclude). Self-test covers the plan, the site files, robots, tasks, both log
 formats, scoring, the interval and the table.
+
+## A2A card profile and A2UI (paper §5.1 "A2A and A2UI"), 0.6.5
+
+```
+npm run a2a:profile -- --in out/registry-local.jsonl out/tranco-1-1k-local.jsonl out/tranco-1k-10k-local.jsonl out/tranco-10k-100k-local.jsonl out/commerce-local.jsonl out/fintech-local.jsonl --dry-run
+npm run a2a:profile -- --in <same files> --out out/a2a-profile.jsonl
+```
+
+Re-fetches every A2A card the crawl validated (`/.well-known/agent-card.json`,
+A2A 0.3+, or the legacy `/.well-known/agent.json`) and profiles what it
+declares: spec generation (v1.0 `supportedInterfaces[]`, 0.3 `url` +
+`preferredTransport`, or legacy `url` only), `protocolVersion`, transports,
+capabilities (streaming, push notifications, authenticated extended card),
+security schemes and whether a `security` requirement is set, skills and
+tags, input/output media types, every `capabilities.extensions[].uri`,
+JWS `signatures`, provider and documentation URL, whether both paths serve
+the same body, and whether the card is a copy of a published sample (by
+name). A2UI (Google's agent-driven UI format) has no discovery file of
+its own: an agent advertises it as an A2A extension with URI
+`https://a2ui.org/a2a-extension/a2ui/<version>` (params may list
+`supportedCatalogIds`) and delivers UI as DataParts of media type
+`application/json+a2ui`; the pass counts cards that declare the extension,
+that list the media type among output modes, and that mark it `required`.
+Resumable; the summary is what the paper quotes. Self-test covers the
+profiler on v1.0 / 0.3 / legacy cards, selection, the re-fetch with an
+injected fetcher, the same-body check and the summary.
 
 ## TODO
 
-- **WebMCP module follow-ups** (§4.2): a `webmcp:summarize` table; a
+- WebMCP module follow-ups (§4.2): a `webmcp:summarize` table; a
   Chrome build with the trial flag on, to measure registrations that are
   gated on the real API rather than on feature detection; signature check of
   origin-trial tokens against Chrome's public key.
-- **MCP initialize probe follow-ups** (§4.6e, landed in 0.5.0 as `handshake`):
+- MCP initialize probe follow-ups (§4.6e, landed in 0.5.0 as `handshake`):
   join `handshake.jsonl` back into the crawl rows
   (`mcp_unauthenticated_initialize` is still `null` inline); a 2026-07-28-style
-  probe (a self-describing `tools/list`? — needs its own ethics review, it is
+  probe (a self-describing `tools/list`? It needs its own ethics review; it is
   not a handshake) for servers classified `modern_no_initialize`.
-- **Corpus builders** (§4.1), remaining parts: Cloudflare Radar category join
+- Corpus builders (§4.1), remaining parts: Cloudflare Radar category join
   (Shopping, Finance); MCP registry / Smithery / Glama scrapers producing
   registrable domains; employer-domain exclusion. (Tranco download, rank
   bands and PSL dedupe landed in 0.3.1 as `corpus:tranco`.)
-- **Consistency metric module** (§4.5): consume `out/bodies/` from
+- Consistency metric module (§4.5): consume `out/bodies/` from
   `--store-bodies`; extract card `tools[]`, OpenAPI operationIds / method+path,
   llms.txt link + heading tokens; pairwise Jaccard; fraction of card tools
   without an OpenAPI counterpart.
@@ -970,7 +997,7 @@ formats, scoring, the interval and the table.
 
 ## Changes in 0.3 (code review fixes)
 
-1. **Content decoding (critical).** 0.2 advertised `accept-encoding` but never
+1. Content decoding (critical). 0.2 advertised `accept-encoding` but never
    decoded, so every compressed artifact was hashed, SimHashed and validated
    as compressed bytes and the fingerprint read gzip. Fixed in `fetchUrl`;
    fixtures and self-tests cover gzip, br and deflate.
@@ -995,7 +1022,7 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
 
 ## Changes in 0.3.1
 
-1. **www is same-site.** A redirect between `example.com` and
+1. www is same-site. A redirect between `example.com` and
    `www.example.com` (either direction) no longer sets `cross_origin_hit`; the
    probe gets `www_redirect: true` (and `final_url`), reason
    `www_redirect:<origin>`. `docs.example.com` and other in-domain origin
@@ -1003,7 +1030,7 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
    bare www variant as the same domain regardless of the TLD. `summarize` shows
    `www` as its own column next to `x-origin`. New fixture vhost `apex.fixture`
    -> `www.apex.fixture`.
-2. **Tranco corpus loader** `src/corpus/tranco.ts` / `npm run corpus:tranco`
+2. Tranco corpus loader `src/corpus/tranco.ts` / `npm run corpus:tranco`
    (see "Tranco corpus" above): zip download or `--file`, list id, PSL dedupe
    across rank bands, `hosts/tranco-<id>-<band>.txt`, `tranco-latest-<band>.txt`
    copies and a `.meta.json` sidecar. No new dependency.
@@ -1023,11 +1050,11 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
 
 - `rank` is carried from `rank,domain` hosts files (Tranco bands) into every JSONL row (`null` for plain host lists), so rank-band splits can be done inside one results file.
 - `npm run rank:backfill -- --hosts hosts/tranco-latest-1-1k.txt --in out/tranco-1-1k-local.jsonl` adds `rank` to a results file crawled before 0.3.2 (rewrites in place, keeps a `.bak`).
-- `npm run crawl:tranco10k` crawls the 1K–10K band (after `npm run corpus:tranco -- --bands 1k-10k`).
+- `npm run crawl:tranco10k` crawls the 1K-10K band (after `npm run corpus:tranco -- --bands 1k-10k`).
 
 ## Changes in 0.4.0
 
-1. **WebMCP headless module** (`src/webmcp.ts`, `npm run webmcp`): headless
+1. WebMCP headless module (`src/webmcp.ts`, `npm run webmcp`): headless
    Chromium via `playwright-core`, homepage + up to 3 same-registrable-domain
    nav links, init-script shim that feature-detects `navigator.modelContext` /
    `document.modelContext` before installing recording proxies for
@@ -1039,16 +1066,16 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
    New fixtures `webmcp.fixture` / `webmcp-none.fixture`
    (`hosts/webmcp-fixtures.txt`, `npm run webmcp:fixtures`). See "WebMCP
    module" for what it can and cannot see.
-2. **New dependency `playwright-core`** (not `playwright`): `npm install` is
+2. New dependency `playwright-core` (not `playwright`): `npm install` is
    required again; Chromium itself is a one-time
    `npx playwright-core install chromium` (or `CRAWLER_CHROMIUM_PATH`).
-3. **5K WebMCP subsample** (`src/corpus/subsample.ts`, `npm run
-   corpus:webmcp-sample`): all reachable 1–1K hosts + seeded weighted draw
+3. 5K WebMCP subsample (`src/corpus/subsample.ts`, `npm run
+   corpus:webmcp-sample`): all reachable 1-1K hosts + seeded weighted draw
    (artifact publishers x2) from the later bands, `hosts/webmcp-sample.txt`
    + `.meta.json`, works with only the first two band files (shortfall
    reported).
-4. **Sharding**: `--shard i/n` on `crawl` and `webmcp`; `summarize` takes
-   several files. `npm run crawl:tranco100k` (10K–100K band, 40 in flight,
+4. Sharding: `--shard i/n` on `crawl` and `webmcp`; `summarize` takes
+   several files. `npm run crawl:tranco100k` (10K-100K band, 40 in flight,
    1 rps/host, `--progress`).
 5. `src/fixture-server.ts` exports `startFixtureServer(port)` (the self-test
    starts it in-process on an ephemeral port). Fixed: `run.ts`'s main guard
@@ -1057,6 +1084,14 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
 6. `crawler_version` is `0.4.0`; the UA is `AgentDiscoveryCrawler/0.4`. The
    HTTP crawl output is unchanged apart from the version string; results from
    0.3.2 need no re-crawl.
+
+## Changes in 0.6.5
+
+`src/a2a-profile.ts` (`npm run a2a:profile`): A2A card profile and A2UI extension census, see the section above; self-test 114 checks.
+
+## Changes in 0.6.4
+
+Canary analyzer: errored API rows no longer count as trials; `--agents` filter; per-UA and background-fetch summary. Self-test 112 checks.
 
 ## Changes in 0.6.3
 
@@ -1068,7 +1103,7 @@ Results from 0.2 are not comparable for any host served compressed; re-crawl.
 
 ## Changes in 0.6.1
 
-0. **Second-vantage tooling**: `deploy/vantage.sh` (VM setup, tmux crawl of the three bands, status) and `src/vantage-compare.ts` (`npm run vantage:compare`), see `deploy/README.md`; self-test 102 checks.
+0. Second-vantage tooling: `deploy/vantage.sh` (VM setup, tmux crawl of the three bands, status) and `src/vantage-compare.ts` (`npm run vantage:compare`), see `deploy/README.md`; self-test 102 checks.
 
 Fingerprint rules tightened after the precision sample (560 hosts, 20 per
 label, rated from evidence the rules do not use; `release/fingerprint-sample.blind.csv`,
@@ -1079,7 +1114,7 @@ a theme file or a bootstrap symbol; a `pages.dev` asset is a hint rather than
 a platform (26%: widgets hosted on Pages). Unchanged labels and their
 measured precision: shopify 100%, ghost 100%, hugo 100%, hubspot 100%,
 webflow 100%, framer 95%, docusaurus 85%, gatsby 85%, wordpress 80%, wix 80%,
-nextjs 70%, nuxt 40%; header-derived hosting labels 89–100% where the
+nextjs 70%, nuxt 40%; header-derived hosting labels 89-100% where the
 re-fetch saw the same header (github-pages, vercel, netlify disagree mainly
 because a CDN in front hid the origin header on re-fetch). Results files
 crawled with 0.6.0 and earlier keep the old labels; the paper reports the
@@ -1088,40 +1123,40 @@ measured precision alongside them. UA `AgentDiscoveryCrawler/0.6`,
 
 ## Changes in 0.6.0
 
-1. **MCP-registry corpus loader** (`src/corpus/registry.ts`, `npm run
-   corpus:registry`) and **Cloudflare Radar commerce / fintech loader**
+1. MCP-registry corpus loader (`src/corpus/registry.ts`, `npm run
+   corpus:registry`) and Cloudflare Radar commerce / fintech loader
    (`src/corpus/radar.ts`, `npm run corpus:radar`), see the two sections
    above; `crawl:registry`, `crawl:commerce`, `crawl:fintech` scripts.
 2. Version bump: UA `AgentDiscoveryCrawler/0.6`, `crawler_version` `0.6.0`.
    Nothing in the probe set, classification or output schema changed, so
    0.5.0 and 0.6.0 results files are directly comparable.
-3. **Fingerprint precision sample** (`src/fingerprint-sample.ts`, `npm run fp:draw|fetch|score`), see its section.
+3. Fingerprint precision sample (`src/fingerprint-sample.ts`, `npm run fp:draw|fetch|score`), see its section.
 4. Self-test: 100 checks (was 88).
 
 ## Changes in 0.5.0
 
-1. **MCP `initialize` handshake probe** (`src/handshake.ts`,
+1. MCP `initialize` handshake probe (`src/handshake.ts`,
    `src/handshake-run.ts`, `npm run handshake`; paper §4.6e). A separate pass
    over crawl results: for hosts with a valid MCP card, one JSON-RPC
    `initialize` (protocol 2025-11-25, no credentials) per advertised endpoint,
    record status / `WWW-Authenticate` / `serverInfo` / `Mcp-Session-Id`, close
    an issued session with `DELETE`, GET the `resource_metadata` URL from the
    challenge and compare it with hygiene's PRM, classify (see the table). Gated
-   on the contact env vars **and** `--i-have-read-the-ethics-section`;
+   on the contact env vars and `--i-have-read-the-ethics-section`;
    `--dry-run` lists targets without contacting anyone; prints the §4.6
    paragraph at start. Verified against modelcontextprotocol.io on 2026-10-06:
    the latest revision (2026-07-28) has no `initialize`, so the probe speaks
    2025-11-25 and files 2026-07-28 servers as `modern_no_initialize` (see
    "What the spec says today").
-2. **Disclosure tooling** (`src/disclosure.ts`, `npm run disclosure`):
+2. Disclosure tooling (`src/disclosure.ts`, `npm run disclosure`):
    `findings.csv` (per host x finding, with severity and contact hint; Shopify
    storefronts rolled into one `shopify-platform-pattern` row), a plain
    coordinated-disclosure `email-template.md` with placeholders, `summary.md`.
-3. **HTTP layer**: `fetchUrl` accepts `POST` (with body) and `DELETE`, extra
+3. HTTP layer: `fetchUrl` accepts `POST` (with body) and `DELETE`, extra
    headers, and an SSE early-stop; a POST/DELETE follows only 307/308. The
    fixture routing hook is `resolveFixtureTarget()`. GET/HEAD behaviour is
    unchanged.
-4. **Fixtures**: `mcp-public.fixture` (JSON result + session id, DELETE
+4. Fixtures: `mcp-public.fixture` (JSON result + session id, DELETE
    handler), `mcp-sse.fixture` (result in an SSE stream that stays open),
    `mcp-protected.fixture` (401 + `WWW-Authenticate` with `resource_metadata`,
    plus the PRM and AS metadata), `mcp-html.fixture` (200 HTML); the fixture
@@ -1129,7 +1164,7 @@ measured precision alongside them. UA `AgentDiscoveryCrawler/0.6`,
    session, and the self-test asserts exactly one POST per endpoint, all
    `initialize`, one DELETE per session, no `Authorization` header, nothing
    else, and that `--dry-run` contacts nothing. `npm run handshake:fixtures`.
-5. **Reporting fixes**: `corpus:tranco` merges bands into an existing
+5. Reporting fixes: `corpus:tranco` merges bands into an existing
    `tranco-<id>.meta.json` instead of overwriting it; the `webmcp` progress
    line counts `webmcp-origin-trial` only for tokens whose feature is WebMCP
    and reports `other_trials` separately (the per-host line shows

@@ -1,0 +1,28 @@
+{
+  "name": "harbor.notes",
+  "version": "1.0.0",
+  "description": "Read-only page search for harbor.technical.pm.",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://harbor.technical.pm/mcp"
+    }
+  ],
+  "tools": [
+    {
+      "name": "ludutu_nibabig",
+      "description": "Search the public pages of this site.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  ]
+}

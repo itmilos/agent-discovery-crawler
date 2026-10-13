@@ -1,0 +1,10 @@
+# harbor.technical.pm
+
+> Developer notes for harbor.technical.pm, a small example service used in a web-measurement study of agent discovery files.
+
+Internal project codename: **serize vitegiz**.
+
+## Docs
+- [API description (OpenAPI)](https://harbor.technical.pm/openapi.json)
+- [MCP server card](https://harbor.technical.pm/.well-known/mcp-server-card)
+- [Agent card](https://harbor.technical.pm/.well-known/agent-card.json)

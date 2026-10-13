@@ -1,0 +1,34 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "grove.technical.pm notes API",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://grove.technical.pm/api"
+    }
+  ],
+  "paths": {
+    "/search": {
+      "get": {
+        "operationId": "searchPages",
+        "summary": "Search public pages",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "results"
+          }
+        }
+      }
+    }
+  }
+}

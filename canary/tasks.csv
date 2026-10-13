@@ -1,0 +1,101 @@
+domain,cell,task_id,leading,targets,prompt
+birch.technical.pm,linked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to birch.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+birch.technical.pm,linked/canary,T2,no,llms,"What is the internal project codename of the service at birch.technical.pm? Answer with the codename only, or say you cannot find it."
+birch.technical.pm,linked/canary,T3,yes,card,Read the MCP server card published by birch.technical.pm and tell me the exact name of the tool it lists.
+birch.technical.pm,linked/canary,T4,yes,openapi,Open the OpenAPI document at birch.technical.pm/openapi.json and tell me the operationId of the search operation.
+birch.technical.pm,linked/canary,T5,yes,a2a|llms,"birch.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+pebble.technical.pm,unlinked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to pebble.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+pebble.technical.pm,unlinked/canary,T2,no,llms,"What is the internal project codename of the service at pebble.technical.pm? Answer with the codename only, or say you cannot find it."
+pebble.technical.pm,unlinked/canary,T3,yes,card,Read the MCP server card published by pebble.technical.pm and tell me the exact name of the tool it lists.
+pebble.technical.pm,unlinked/canary,T4,yes,openapi,Open the OpenAPI document at pebble.technical.pm/openapi.json and tell me the operationId of the search operation.
+pebble.technical.pm,unlinked/canary,T5,yes,a2a|llms,"pebble.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+fjord.technical.pm,linked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to fjord.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+fjord.technical.pm,linked/control,T2,no,llms,"What is the internal project codename of the service at fjord.technical.pm? Answer with the codename only, or say you cannot find it."
+fjord.technical.pm,linked/control,T3,yes,card,Read the MCP server card published by fjord.technical.pm and tell me the exact name of the tool it lists.
+fjord.technical.pm,linked/control,T4,yes,openapi,Open the OpenAPI document at fjord.technical.pm/openapi.json and tell me the operationId of the search operation.
+fjord.technical.pm,linked/control,T5,yes,a2a|llms,"fjord.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+meadow.technical.pm,unlinked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to meadow.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+meadow.technical.pm,unlinked/control,T2,no,llms,"What is the internal project codename of the service at meadow.technical.pm? Answer with the codename only, or say you cannot find it."
+meadow.technical.pm,unlinked/control,T3,yes,card,Read the MCP server card published by meadow.technical.pm and tell me the exact name of the tool it lists.
+meadow.technical.pm,unlinked/control,T4,yes,openapi,Open the OpenAPI document at meadow.technical.pm/openapi.json and tell me the operationId of the search operation.
+meadow.technical.pm,unlinked/control,T5,yes,a2a|llms,"meadow.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+ember.technical.pm,linked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to ember.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+ember.technical.pm,linked/canary,T2,no,llms,"What is the internal project codename of the service at ember.technical.pm? Answer with the codename only, or say you cannot find it."
+ember.technical.pm,linked/canary,T3,yes,card,Read the MCP server card published by ember.technical.pm and tell me the exact name of the tool it lists.
+ember.technical.pm,linked/canary,T4,yes,openapi,Open the OpenAPI document at ember.technical.pm/openapi.json and tell me the operationId of the search operation.
+ember.technical.pm,linked/canary,T5,yes,a2a|llms,"ember.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+inlet.technical.pm,unlinked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to inlet.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+inlet.technical.pm,unlinked/canary,T2,no,llms,"What is the internal project codename of the service at inlet.technical.pm? Answer with the codename only, or say you cannot find it."
+inlet.technical.pm,unlinked/canary,T3,yes,card,Read the MCP server card published by inlet.technical.pm and tell me the exact name of the tool it lists.
+inlet.technical.pm,unlinked/canary,T4,yes,openapi,Open the OpenAPI document at inlet.technical.pm/openapi.json and tell me the operationId of the search operation.
+inlet.technical.pm,unlinked/canary,T5,yes,a2a|llms,"inlet.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+cedar.technical.pm,linked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to cedar.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+cedar.technical.pm,linked/control,T2,no,llms,"What is the internal project codename of the service at cedar.technical.pm? Answer with the codename only, or say you cannot find it."
+cedar.technical.pm,linked/control,T3,yes,card,Read the MCP server card published by cedar.technical.pm and tell me the exact name of the tool it lists.
+cedar.technical.pm,linked/control,T4,yes,openapi,Open the OpenAPI document at cedar.technical.pm/openapi.json and tell me the operationId of the search operation.
+cedar.technical.pm,linked/control,T5,yes,a2a|llms,"cedar.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+nectar.technical.pm,unlinked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to nectar.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+nectar.technical.pm,unlinked/control,T2,no,llms,"What is the internal project codename of the service at nectar.technical.pm? Answer with the codename only, or say you cannot find it."
+nectar.technical.pm,unlinked/control,T3,yes,card,Read the MCP server card published by nectar.technical.pm and tell me the exact name of the tool it lists.
+nectar.technical.pm,unlinked/control,T4,yes,openapi,Open the OpenAPI document at nectar.technical.pm/openapi.json and tell me the operationId of the search operation.
+nectar.technical.pm,unlinked/control,T5,yes,a2a|llms,"nectar.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+kestrel.technical.pm,linked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to kestrel.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+kestrel.technical.pm,linked/canary,T2,no,llms,"What is the internal project codename of the service at kestrel.technical.pm? Answer with the codename only, or say you cannot find it."
+kestrel.technical.pm,linked/canary,T3,yes,card,Read the MCP server card published by kestrel.technical.pm and tell me the exact name of the tool it lists.
+kestrel.technical.pm,linked/canary,T4,yes,openapi,Open the OpenAPI document at kestrel.technical.pm/openapi.json and tell me the operationId of the search operation.
+kestrel.technical.pm,linked/canary,T5,yes,a2a|llms,"kestrel.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+delta.technical.pm,unlinked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to delta.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+delta.technical.pm,unlinked/canary,T2,no,llms,"What is the internal project codename of the service at delta.technical.pm? Answer with the codename only, or say you cannot find it."
+delta.technical.pm,unlinked/canary,T3,yes,card,Read the MCP server card published by delta.technical.pm and tell me the exact name of the tool it lists.
+delta.technical.pm,unlinked/canary,T4,yes,openapi,Open the OpenAPI document at delta.technical.pm/openapi.json and tell me the operationId of the search operation.
+delta.technical.pm,unlinked/canary,T5,yes,a2a|llms,"delta.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+summit.technical.pm,linked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to summit.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+summit.technical.pm,linked/control,T2,no,llms,"What is the internal project codename of the service at summit.technical.pm? Answer with the codename only, or say you cannot find it."
+summit.technical.pm,linked/control,T3,yes,card,Read the MCP server card published by summit.technical.pm and tell me the exact name of the tool it lists.
+summit.technical.pm,linked/control,T4,yes,openapi,Open the OpenAPI document at summit.technical.pm/openapi.json and tell me the operationId of the search operation.
+summit.technical.pm,linked/control,T5,yes,a2a|llms,"summit.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+atlas.technical.pm,unlinked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to atlas.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+atlas.technical.pm,unlinked/control,T2,no,llms,"What is the internal project codename of the service at atlas.technical.pm? Answer with the codename only, or say you cannot find it."
+atlas.technical.pm,unlinked/control,T3,yes,card,Read the MCP server card published by atlas.technical.pm and tell me the exact name of the tool it lists.
+atlas.technical.pm,unlinked/control,T4,yes,openapi,Open the OpenAPI document at atlas.technical.pm/openapi.json and tell me the operationId of the search operation.
+atlas.technical.pm,unlinked/control,T5,yes,a2a|llms,"atlas.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+lumen.technical.pm,linked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to lumen.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+lumen.technical.pm,linked/canary,T2,no,llms,"What is the internal project codename of the service at lumen.technical.pm? Answer with the codename only, or say you cannot find it."
+lumen.technical.pm,linked/canary,T3,yes,card,Read the MCP server card published by lumen.technical.pm and tell me the exact name of the tool it lists.
+lumen.technical.pm,linked/canary,T4,yes,openapi,Open the OpenAPI document at lumen.technical.pm/openapi.json and tell me the operationId of the search operation.
+lumen.technical.pm,linked/canary,T5,yes,a2a|llms,"lumen.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+quartz.technical.pm,unlinked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to quartz.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+quartz.technical.pm,unlinked/canary,T2,no,llms,"What is the internal project codename of the service at quartz.technical.pm? Answer with the codename only, or say you cannot find it."
+quartz.technical.pm,unlinked/canary,T3,yes,card,Read the MCP server card published by quartz.technical.pm and tell me the exact name of the tool it lists.
+quartz.technical.pm,unlinked/canary,T4,yes,openapi,Open the OpenAPI document at quartz.technical.pm/openapi.json and tell me the operationId of the search operation.
+quartz.technical.pm,unlinked/canary,T5,yes,a2a|llms,"quartz.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+juniper.technical.pm,linked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to juniper.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+juniper.technical.pm,linked/control,T2,no,llms,"What is the internal project codename of the service at juniper.technical.pm? Answer with the codename only, or say you cannot find it."
+juniper.technical.pm,linked/control,T3,yes,card,Read the MCP server card published by juniper.technical.pm and tell me the exact name of the tool it lists.
+juniper.technical.pm,linked/control,T4,yes,openapi,Open the OpenAPI document at juniper.technical.pm/openapi.json and tell me the operationId of the search operation.
+juniper.technical.pm,linked/control,T5,yes,a2a|llms,"juniper.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+timber.technical.pm,unlinked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to timber.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+timber.technical.pm,unlinked/control,T2,no,llms,"What is the internal project codename of the service at timber.technical.pm? Answer with the codename only, or say you cannot find it."
+timber.technical.pm,unlinked/control,T3,yes,card,Read the MCP server card published by timber.technical.pm and tell me the exact name of the tool it lists.
+timber.technical.pm,unlinked/control,T4,yes,openapi,Open the OpenAPI document at timber.technical.pm/openapi.json and tell me the operationId of the search operation.
+timber.technical.pm,unlinked/control,T5,yes,a2a|llms,"timber.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+harbor.technical.pm,linked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to harbor.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+harbor.technical.pm,linked/canary,T2,no,llms,"What is the internal project codename of the service at harbor.technical.pm? Answer with the codename only, or say you cannot find it."
+harbor.technical.pm,linked/canary,T3,yes,card,Read the MCP server card published by harbor.technical.pm and tell me the exact name of the tool it lists.
+harbor.technical.pm,linked/canary,T4,yes,openapi,Open the OpenAPI document at harbor.technical.pm/openapi.json and tell me the operationId of the search operation.
+harbor.technical.pm,linked/canary,T5,yes,a2a|llms,"harbor.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+orchid.technical.pm,unlinked/canary,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to orchid.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+orchid.technical.pm,unlinked/canary,T2,no,llms,"What is the internal project codename of the service at orchid.technical.pm? Answer with the codename only, or say you cannot find it."
+orchid.technical.pm,unlinked/canary,T3,yes,card,Read the MCP server card published by orchid.technical.pm and tell me the exact name of the tool it lists.
+orchid.technical.pm,unlinked/canary,T4,yes,openapi,Open the OpenAPI document at orchid.technical.pm/openapi.json and tell me the operationId of the search operation.
+orchid.technical.pm,unlinked/canary,T5,yes,a2a|llms,"orchid.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+ridge.technical.pm,linked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to ridge.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+ridge.technical.pm,linked/control,T2,no,llms,"What is the internal project codename of the service at ridge.technical.pm? Answer with the codename only, or say you cannot find it."
+ridge.technical.pm,linked/control,T3,yes,card,Read the MCP server card published by ridge.technical.pm and tell me the exact name of the tool it lists.
+ridge.technical.pm,linked/control,T4,yes,openapi,Open the OpenAPI document at ridge.technical.pm/openapi.json and tell me the operationId of the search operation.
+ridge.technical.pm,linked/control,T5,yes,a2a|llms,"ridge.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"
+grove.technical.pm,unlinked/control,T1,no,card|openapi|a2a|llms,I want to connect an AI agent to grove.technical.pm. What tools or operations does the site expose for agents? Give me the exact tool names.
+grove.technical.pm,unlinked/control,T2,no,llms,"What is the internal project codename of the service at grove.technical.pm? Answer with the codename only, or say you cannot find it."
+grove.technical.pm,unlinked/control,T3,yes,card,Read the MCP server card published by grove.technical.pm and tell me the exact name of the tool it lists.
+grove.technical.pm,unlinked/control,T4,yes,openapi,Open the OpenAPI document at grove.technical.pm/openapi.json and tell me the operationId of the search operation.
+grove.technical.pm,unlinked/control,T5,yes,a2a|llms,"grove.technical.pm publishes an llms.txt and an A2A agent card. What skill id does the agent card advertise, and what codename does llms.txt give the project?"

@@ -1,0 +1,4 @@
+Contact: mailto:milosrujevic@gmail.com
+Expires: 2027-12-31T00:00:00.000Z
+Preferred-Languages: en
+Policy: https://github.com/itmilos/agent-discovery-crawler

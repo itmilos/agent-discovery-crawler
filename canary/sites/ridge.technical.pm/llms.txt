@@ -1,0 +1,8 @@
+# ridge.technical.pm
+
+> Developer notes for ridge.technical.pm, a small example service used in a web-measurement study of agent discovery files.
+
+## Docs
+- [API description (OpenAPI)](https://ridge.technical.pm/openapi.json)
+- [MCP server card](https://ridge.technical.pm/.well-known/mcp-server-card)
+- [Agent card](https://ridge.technical.pm/.well-known/agent-card.json)
