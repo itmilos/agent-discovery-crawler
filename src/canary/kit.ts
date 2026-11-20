@@ -275,12 +275,13 @@ export interface AgentRow { agent: string; n: number; errors: number; fetched_ll
 export function tabulate(results: TrialResult[]): AgentRow[] {
   const agents = [...new Set(results.map((r) => r.agent))].sort();
   return agents.map((agent) => {
-    const R = results.filter((r) => r.agent === agent);
+    const all = results.filter((r) => r.agent === agent);
+    const R = all.filter((r) => !r.error); // errored API calls are not trials: no answer, no fetch
     const cnt = (f: (r: TrialResult) => boolean) => R.filter(f).length;
     const canaryDomains = R.filter((r) => r.cell.endsWith('/canary'));
     const group = (key: (r: TrialResult) => string) => { const o: Record<string, { n: number; fetched_any: number; canary: number }> = {}; for (const r of R) { const k = key(r); (o[k] ??= { n: 0, fetched_any: 0, canary: 0 }); o[k].n++; if (r.fetched_any) o[k].fetched_any++; if (r.canary_in_answer.length) o[k].canary++; } return o; };
     return {
-      agent, n: R.length, errors: cnt((r) => !!r.error), reported_artifact: cnt((r) => r.reported_artifact),
+      agent, n: R.length, errors: all.length - R.length, reported_artifact: cnt((r) => r.reported_artifact),
       fetched_llms: cnt((r) => r.fetched.llms), fetched_card: cnt((r) => r.fetched.card), fetched_any: cnt((r) => r.fetched_any),
       canary: canaryDomains.filter((r) => r.canary_in_answer.length).length,
       ci_fetched_any: clusteredCI(R.map((r) => ({ domain: r.domain, v: r.fetched_any }))),
@@ -289,6 +290,18 @@ export function tabulate(results: TrialResult[]): AgentRow[] {
       false_positive_controls: R.filter((r) => r.cell.endsWith('/control') && r.canary_in_answer.length).length,
     };
   });
+}
+
+/** Artifact-path hits outside every trial window (scanner noise the windows exclude) and the user agents seen inside windows. */
+export function hitContext(trials: Trial[], hits: LogHit[], slackMs = 60_000): { background: number; background_ua: Record<string, number>; in_window_ua: Record<string, number> } {
+  const allPaths = ARTIFACT_KEYS.flatMap((k) => ARTIFACT_PATHS[k]);
+  const art = hits.filter((h) => allPaths.includes(h.path));
+  const inWin = (h: LogHit) => trials.some((t) => (h.host === null || h.host === t.domain || h.host === `www.${t.domain}`) && h.ts >= t.start - slackMs && h.ts <= t.end + slackMs);
+  const bg: Record<string, number> = {}, iw: Record<string, number> = {};
+  const key = (ua: string) => ua.replace(/\/[\d.]+.*$/, '').slice(0, 60) || '(none)';
+  let background = 0;
+  for (const h of art) { if (inWin(h)) iw[key(h.ua)] = (iw[key(h.ua)] ?? 0) + 1; else { background++; bg[key(h.ua)] = (bg[key(h.ua)] ?? 0) + 1; } }
+  return { background, background_ua: bg, in_window_ua: iw };
 }
 
 export function renderTable(rows: AgentRow[]): string {
@@ -326,9 +339,10 @@ async function main() {
   }
   if (cmd === 'analyze') {
     const mf = arg('manifest'), tf = arg('trials'), logs = args('logs'), out = arg('out');
-    if (!mf || !tf) { console.error('usage: kit.ts analyze --manifest canary/manifest.json --trials canary/trials.csv --logs LOG... [--out results.json] [--slack-ms 60000]'); process.exit(2); }
+    if (!mf || !tf) { console.error('usage: kit.ts analyze --manifest canary/manifest.json --trials canary/trials.csv --logs LOG... [--agents openai,anthropic] [--out results.json] [--slack-ms 60000]'); process.exit(2); }
     const m = JSON.parse(readFileSync(mf, 'utf8')) as Manifest;
-    const trials = readTrials(readFileSync(tf, 'utf8'));
+    const only = arg('agents')?.split(',').map((x) => x.trim()).filter(Boolean);
+    const trials = readTrials(readFileSync(tf, 'utf8')).filter((t) => !only || only.includes(t.agent));
     const hits = await readLogs(logs);
     const slack = Number(arg('slack-ms') ?? 60_000);
     const ov = overlappingWindows(trials, slack);
@@ -336,6 +350,9 @@ async function main() {
     const results = scoreTrials(m, trials, hits, slack);
     const rows = tabulate(results);
     process.stdout.write(renderTable(rows));
+    const ctx = hitContext(trials.filter((t) => !t.error), hits, slack);
+    const top = (o: Record<string, number>) => Object.entries(o).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => `${k} ${v}`).join('; ') || 'none';
+    process.stdout.write(`\nartifact fetches inside trial windows, by user agent: ${top(ctx.in_window_ua)}\nartifact fetches outside every window (background, excluded): ${ctx.background} — ${top(ctx.background_ua)}\n`);
     console.error(`${trials.length} trials, ${hits.length} log lines, ${results.filter((r) => r.hits.length).length} trials with an artifact fetch in window`);
     if (out) { mkdirSync(dirname(out), { recursive: true }); writeFileSync(out, JSON.stringify({ agents: rows, trials: results }, null, 2) + '\n'); console.error(`-> ${out}`); }
     return;

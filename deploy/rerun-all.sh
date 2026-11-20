@@ -28,7 +28,7 @@ case "$cmd" in
     sysctl -q -w net.ipv4.ip_local_port_range="10240 65535" net.ipv4.tcp_fin_timeout=15
     if [ -d "$DIR/.git" ]; then git -C "$DIR" pull -q; else git clone -q "$REPO" "$DIR"; fi
     cd "$DIR" && npm ci --silent --ignore-scripts
-    npx tsx src/selftest.ts >/dev/null 2>&1 && echo "self-test passed ($(git rev-parse --short HEAD), $(node -v))" || { echo "self-test FAILED"; exit 1; }
+    npx tsx src/selftest.ts >/tmp/selftest.log 2>&1 && echo "self-test passed ($(git rev-parse --short HEAD), $(node -v))" || { tail -30 /tmp/selftest.log; echo "self-test FAILED"; exit 1; }
     mkdir -p out hosts
     if [ -n "$TRANCO_LIST" ]; then
       [ -s "hosts/tranco-$TRANCO_LIST.csv" ] || curl -fsSL "https://tranco-list.eu/download/$TRANCO_LIST/1000000" -o "hosts/tranco-$TRANCO_LIST.csv"

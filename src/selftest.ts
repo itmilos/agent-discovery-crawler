@@ -914,7 +914,7 @@ await t('canary: site files carry the tokens only on canary domains, links only 
   assert.equal(tasks.length, 20); assert.deepEqual([...new Set(tasks.map((r) => r.task_id))], ['T1', 'T2', 'T3', 'T4', 'T5']);
   assert.equal(tasks.filter((r) => r.leading === 'no').length, 8);
   assert.ok(tasks.every((r) => r.prompt.includes(r.domain)));
-  assert.equal(readFileSync(join(dir, 'trials.csv'), 'utf8').trim(), 'agent,domain,task_id,start_utc,end_utc,answer');
+  assert.equal(readFileSync(join(dir, 'trials.csv'), 'utf8').trim(), 'agent,domain,task_id,start_utc,end_utc,answer,model,reported_urls,error');
 });
 await t('canary: combined and Caddy log lines parse with UTC timestamps; unreadable lines are skipped', () => {
   const h = cParseLogLine('203.0.113.9 - - [08/Oct/2026:14:02:11 +0200] "GET /.well-known/mcp-server-card?x=1 HTTP/1.1" 200 512 "-" "ChatGPT-User/1.0"', 'one.example')!;
@@ -930,7 +930,7 @@ await t('canary: trials scored against log windows, canary detection is separato
   const can = m.domains.find((d) => d.cell_label === 'linked/canary')!, ctl = m.domains.find((d) => d.cell_label === 'linked/control')!;
   const t0 = Date.parse('2026-10-09T10:00:00Z');
   const iso = (ms: number) => new Date(ms).toISOString();
-  const trials = cReadTrials([cTRIALS_HEADER + ',model,reported_urls,error',
+  const trials = cReadTrials([cTRIALS_HEADER,
     `agentX,${can.domain},T3,${iso(t0)},${iso(t0 + 120_000)},"The tool is called ${can.tokens!.card.replace('_', ' ').toUpperCase()}.",m1,https://${can.domain}/.well-known/mcp-server-card https://other.example/x,`,
     `agentX,${ctl.domain},T3,${iso(t0 + 600_000)},${iso(t0 + 700_000)},"It lists search_pages."`,
     `agentY,${can.domain},T2,${iso(t0 + 1_200_000)},${iso(t0 + 1_260_000)},"I could not find a codename."`,
